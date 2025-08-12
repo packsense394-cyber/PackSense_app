@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PackSense - Enhanced Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(1deg); }
+            66% { transform: translateY(10px) rotate(-1deg); }
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .logo-icon {
+            background: linear-gradient(45deg, #fff, #e8f1fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-right: 10px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        /* Main container */
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+        }
+        
+        .form-title {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #1e3c72;
+        }
+        
+        .form-title h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .form-title p {
+            font-size: 1.1em;
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-input {
+            width: 20px;
+            height: 20px;
+            accent-color: #667eea;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .info-box h3 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .info-box li:before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-box-open logo-icon"></i>
+            PackSense
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/analyze" class="nav-link">Standard Analysis</a>
+            <a href="/enhanced_analyze" class="nav-link">Enhanced Analysis</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="form-title">
+            <h1>Enhanced Packaging Analysis</h1>
+            <p>Comprehensive review extraction and sentiment analysis for packaging insights</p>
+        </div>
+
+        <div class="info-box">
+            <h3>What this enhanced analysis does:</h3>
+            <ul>
+                <li>Extracts initial reviews (configurable count)</li>
+                <li>Searches for all predefined packaging-related terms</li>
+                <li>Performs comprehensive sentiment analysis</li>
+                <li>Provides detailed statistics and insights</li>
+                <li>Offers interactive filtering and visualization</li>
+            </ul>
+        </div>
+
+        <form method="POST" id="enhancedForm">
+            <div class="form-group">
+                <label for="review_url" class="form-label">Amazon Product Reviews URL</label>
+                <input type="url" id="review_url" name="review_url" class="form-input" 
+                       placeholder="https://www.amazon.com/product-reviews/B0XXXXX..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Amazon Email</label>
+                <input type="email" id="email" name="email" class="form-input" 
+                       placeholder="your-email@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Amazon Password</label>
+                <input type="password" id="password" name="password" class="form-input" 
+                       placeholder="Your Amazon password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="initial_count" class="form-label">Initial Reviews to Extract</label>
+                <select id="initial_count" name="initial_count" class="form-select">
+                    <option value="50">50 reviews</option>
+                    <option value="100" selected>100 reviews</option>
+                    <option value="200">200 reviews</option>
+                    <option value="300">300 reviews</option>
+                    <option value="500">500 reviews</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="use_headless" name="use_headless" class="checkbox-input">
+                <label for="use_headless">Run in headless mode (faster, no browser window)</label>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i class="fas fa-search"></i> Start Enhanced Analysis
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing reviews and extracting packaging insights...</p>
+            <p><small>This may take several minutes depending on the number of reviews</small></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('enhancedForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            loading.style.display = 'block';
+            
+            // Scroll to loading message
+            loading.scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html> 

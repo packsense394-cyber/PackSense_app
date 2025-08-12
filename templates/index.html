@@ -1,0 +1,1005 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>PackSense - Intelligent Packaging Evaluation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Roboto font -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      /* Reset & base */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Roboto', sans-serif;
+        min-height: 100vh;
+        background: #000000;
+        position: relative;
+        overflow-x: hidden;
+        color: #ffffff;
+      }
+      
+      /* Animated background elements */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+          radial-gradient(circle at 20% 80%, rgba(64, 64, 64, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(32, 32, 32, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, rgba(48, 48, 48, 0.1) 0%, transparent 50%);
+        z-index: -1;
+        animation: float 20s ease-in-out infinite;
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        33% { transform: translateY(-20px) rotate(1deg); }
+        66% { transform: translateY(10px) rotate(-1deg); }
+      }
+      
+      /* Floating particles */
+      .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+      }
+      
+      .particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        animation: particle-float 15s infinite linear;
+      }
+      
+      @keyframes particle-float {
+        0% { transform: translateY(100vh) translateX(0px) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(-100px) translateX(20px) rotate(360deg); opacity: 0; }
+      }
+      
+      /* Main container */
+      .main-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      /* Fixed Navigation Header */
+      .nav-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 20px 40px;
+        background: transparent;
+        z-index: 100;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: fadeInUp 1s ease-out;
+      }
+      
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        font-size: 2.2em;
+        font-weight: 700;
+        color: #ffffff;
+        animation: fadeInScale 1.2s ease-out;
+      }
+      
+      .nav-logo-icon {
+        margin-right: 15px;
+        font-size: 1.2em;
+        animation: bounce 2s ease-in-out infinite;
+      }
+      
+      .nav-links {
+        display: flex;
+        gap: 20px;
+        animation: fadeInScale 1.4s ease-out;
+      }
+      
+      .nav-link {
+        color: #ffffff;
+        text-decoration: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(128, 128, 128, 0.2);
+        position: relative;
+        overflow: hidden;
+        font-size: 1.1em;
+        font-weight: 500;
+      }
+      
+      .nav-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+      }
+      
+      .nav-link:hover::before {
+        left: 100%;
+      }
+      
+      .nav-link:hover {
+        background: rgba(192, 192, 192, 0.3);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      /* Enhanced header */
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+        color: #ffffff;
+        margin-top: 100px;
+        animation: fadeInUp 1s ease-out 0.2s both;
+      }
+      
+      .header h1 {
+        font-size: 4.2em;
+        font-weight: 700;
+        margin-bottom: 15px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        color: #ffffff;
+        animation: fadeInScale 1.2s ease-out 0.4s both;
+        position: relative;
+      }
+      
+      .header h1::after {
+        content: '';
+        position: absolute;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, #ffffff, transparent);
+        animation: expandWidth 1.5s ease-out 1s forwards;
+      }
+      
+      @keyframes expandWidth {
+        to { width: 250px; }
+      }
+      
+      .header p {
+        font-size: 1.5em;
+        opacity: 0.9;
+        margin-bottom: 20px;
+        color: #cccccc;
+        animation: fadeInUp 1s ease-out 0.6s both;
+      }
+      
+      /* Enhanced animations and effects */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes fadeInScale {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.1); }
+        50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.3), 0 0 30px rgba(255, 255, 255, 0.2); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      
+      @keyframes slideInLeft {
+        from {
+          opacity: 0;
+          transform: translateX(-50px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(50px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-10px);
+        }
+        60% {
+          transform: translateY(-5px);
+        }
+      }
+      
+      /* Enhanced particle effects */
+      .particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 50%;
+        animation: particle-float 15s infinite linear;
+        box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+      }
+      
+      .particle:nth-child(3n) {
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+      }
+      
+      .particle:nth-child(5n) {
+        background: rgba(200, 200, 200, 0.7);
+        box-shadow: 0 0 4px rgba(200, 200, 200, 0.5);
+      }
+      
+      /* Main container */
+      .main-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        position: relative;
+        z-index: 1;
+      }
+      
+      .nav-links {
+        display: flex;
+        gap: 20px;
+        animation: fadeInScale 1.4s ease-out;
+      }
+      
+      .nav-link {
+        color: #ffffff;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(128, 128, 128, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .nav-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+      }
+      
+      .nav-link:hover::before {
+        left: 100%;
+      }
+      
+      .nav-link:hover {
+        background: rgba(192, 192, 192, 0.3);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      /* Enhanced form container */
+      .form-container {
+        background: rgba(40, 40, 40, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        max-width: 800px;
+        width: 100%;
+        margin-bottom: 40px;
+        animation: fadeInScale 1s ease-out 0.8s both;
+        transition: all 0.3s ease;
+      }
+      
+      .form-container:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+        border: 1px solid rgba(192, 192, 192, 0.5);
+      }
+      
+      .form-title {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #ffffff;
+        font-size: 1.8em;
+        font-weight: 600;
+        animation: fadeInUp 1s ease-out 1s both;
+        position: relative;
+      }
+      
+      .form-title::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #ffffff, transparent);
+      }
+      
+      /* Enhanced form elements */
+      .search-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+        animation: fadeInUp 1s ease-out 1.2s both;
+      }
+      
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        animation: fadeInScale 0.8s ease-out;
+      }
+      
+      .form-group:nth-child(1) { animation-delay: 1.4s; }
+      .form-group:nth-child(2) { animation-delay: 1.5s; }
+      .form-group:nth-child(3) { animation-delay: 1.6s; }
+      .form-group:nth-child(4) { animation-delay: 1.7s; }
+      .form-group:nth-child(5) { animation-delay: 1.8s; }
+      
+      .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+      
+      .form-group label {
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #cccccc;
+        font-size: 0.9em;
+        transition: all 0.3s ease;
+      }
+      
+      .form-group:hover label {
+        color: #ffffff;
+        transform: translateX(5px);
+      }
+      
+      .form-group input,
+      .form-group select {
+        padding: 15px;
+        border: 2px solid #666666;
+        border-radius: 10px;
+        font-size: 1em;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(60, 60, 60, 0.8);
+        color: #ffffff;
+        position: relative;
+      }
+      
+      .form-group input:hover,
+      .form-group select:hover {
+        border-color: #999999;
+        background: rgba(70, 70, 70, 0.8);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      
+      .form-group input::placeholder {
+        color: #999999;
+        transition: all 0.3s ease;
+      }
+      
+      .form-group input:focus::placeholder {
+        color: #cccccc;
+        transform: translateX(5px);
+      }
+      
+      /* Enhanced submit button */
+      .submit-btn {
+        grid-column: 1 / -1;
+        background: linear-gradient(45deg, #333333, #666666, #999999, #cccccc);
+        color: #ffffff;
+        border: none;
+        padding: 18px;
+        border-radius: 10px;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+        animation: fadeInScale 1s ease-out 2s both;
+      }
+      
+      .submit-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s;
+      }
+      
+      .submit-btn:hover::before {
+        left: 100%;
+      }
+      
+      .submit-btn:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(45deg, #444444, #777777, #aaaaaa, #dddddd);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      .submit-btn:active {
+        transform: translateY(-2px) scale(0.98);
+      }
+      
+      /* Enhanced metrics section */
+      .metrics-section {
+        background: rgba(40, 40, 40, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        max-width: 800px;
+        width: 100%;
+        animation: fadeInScale 1s ease-out 2.2s both;
+        transition: all 0.3s ease;
+      }
+      
+      .metrics-section:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+      }
+      
+      .metrics-title {
+        text-align: center;
+        margin-bottom: 25px;
+        color: #ffffff;
+        font-size: 1.5em;
+        font-weight: 600;
+        animation: fadeInUp 1s ease-out 2.4s both;
+        position: relative;
+      }
+      
+      .metrics-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #ffffff, transparent);
+      }
+      
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        justify-content: center;
+      }
+      
+      .card {
+        background: rgba(60, 60, 60, 0.8);
+        padding: 25px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        animation: fadeInScale 0.8s ease-out;
+      }
+      
+      .card:nth-child(1) { animation-delay: 2.6s; }
+      .card:nth-child(2) { animation-delay: 2.8s; }
+      .card:nth-child(3) { animation-delay: 3.0s; }
+      
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.6s;
+      }
+      
+      .card:hover::before {
+        left: 100%;
+      }
+      
+      .card:hover {
+        transform: translateY(-8px) scale(1.05);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        background: rgba(80, 80, 80, 0.8);
+        border: 1px solid rgba(192, 192, 192, 0.5);
+      }
+      
+      .card-icon {
+        font-size: 2.5em;
+        margin-bottom: 15px;
+        display: block;
+        transition: all 0.3s ease;
+        animation: bounce 2s ease-in-out infinite;
+      }
+      
+      .card:hover .card-icon {
+        transform: scale(1.2) rotate(5deg);
+        animation: pulse 1s ease-in-out infinite;
+      }
+      
+      .card-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #cccccc;
+        font-size: 1em;
+        transition: all 0.3s ease;
+      }
+      
+      .card:hover .card-title {
+        color: #ffffff;
+        transform: translateY(-2px);
+      }
+      
+      .card-value {
+        font-size: 2em;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        transition: all 0.3s ease;
+      }
+      
+      .card:hover .card-value {
+        transform: scale(1.1);
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      }
+      
+      /* Enhanced loading animation */
+      .loading {
+        display: none;
+        text-align: center;
+        margin-top: 20px;
+        color: #cccccc;
+        animation: fadeInUp 0.5s ease-out;
+      }
+      
+      .spinner {
+        border: 3px solid #666666;
+        border-top: 3px solid #ffffff;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2.5em;
+        }
+        
+        .form-container,
+        .metrics-section {
+          padding: 25px;
+          margin: 20px;
+        }
+        
+        .search-form {
+          grid-template-columns: 1fr;
+        }
+        
+        .metrics {
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+      }
+      
+      /* Scroll-triggered animations */
+      .animate-on-scroll {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s ease-out;
+      }
+      
+      .animate-on-scroll.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      
+      /* Enhanced focus states */
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2), 0 10px 25px rgba(0, 0, 0, 0.4);
+        transform: translateY(-3px);
+        background: rgba(80, 80, 80, 0.8);
+        animation: glow 2s ease-in-out infinite;
+      }
+      
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      /* Enhanced button states */
+      .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+        animation: none !important;
+      }
+      
+      /* Floating animation for cards */
+      @keyframes float-card {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+      }
+      
+      .card {
+        animation: float-card 3s ease-in-out infinite;
+      }
+      
+      .card:nth-child(2) {
+        animation-delay: 0.5s;
+      }
+      
+      .card:nth-child(3) {
+        animation-delay: 1s;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Floating particles -->
+    <div class="particles">
+      <div class="particle" style="left: 8%; top: 10%; animation-delay: 0s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 15%; top: 20%; animation-delay: 2s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 25%; top: 15%; animation-delay: 4s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 35%; top: 25%; animation-delay: 1s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 45%; top: 30%; animation-delay: 3s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 55%; top: 5%; animation-delay: 5s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 65%; top: 35%; animation-delay: 2s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 75%; top: 40%; animation-delay: 4s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 85%; top: 45%; animation-delay: 1s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 95%; top: 50%; animation-delay: 3s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 5%; top: 55%; animation-delay: 5s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 12%; top: 60%; animation-delay: 2s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 22%; top: 65%; animation-delay: 4s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 32%; top: 70%; animation-delay: 1s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 42%; top: 75%; animation-delay: 3s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 52%; top: 80%; animation-delay: 5s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 62%; top: 85%; animation-delay: 2s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 72%; top: 90%; animation-delay: 4s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 82%; top: 95%; animation-delay: 1s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 92%; top: 8%; animation-delay: 3s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 18%; top: 12%; animation-delay: 5s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 28%; top: 18%; animation-delay: 2s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 38%; top: 22%; animation-delay: 4s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 48%; top: 28%; animation-delay: 1s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 58%; top: 33%; animation-delay: 3s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 68%; top: 38%; animation-delay: 5s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 78%; top: 43%; animation-delay: 2s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 88%; top: 48%; animation-delay: 4s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 98%; top: 53%; animation-delay: 1s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 3%; top: 58%; animation-delay: 3s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 13%; top: 63%; animation-delay: 5s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 23%; top: 68%; animation-delay: 2s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 33%; top: 73%; animation-delay: 4s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 43%; top: 78%; animation-delay: 1s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 53%; top: 83%; animation-delay: 3s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 63%; top: 88%; animation-delay: 5s; width: 4px; height: 4px;"></div>
+      <div class="particle" style="left: 73%; top: 93%; animation-delay: 2s; width: 2px; height: 2px;"></div>
+      <div class="particle" style="left: 83%; top: 98%; animation-delay: 4s; width: 3px; height: 3px;"></div>
+      <div class="particle" style="left: 93%; top: 3%; animation-delay: 1s; width: 4px; height: 4px;"></div>
+    </div>
+
+    <!-- Navigation Header -->
+    <div class="nav-header">
+      <div class="nav-logo">
+        <span class="nav-logo-icon">📦</span>
+        PackSense
+      </div>
+      <div class="nav-links">
+        <a href="{{ url_for('intro') }}" class="nav-link">
+          <i class="fas fa-home"></i> Home
+        </a>
+      </div>
+    </div>
+    
+    <div class="main-container">
+      <div class="header">
+        <h1>Welcome to PackSense</h1>
+        <p>Intelligent Packaging Evaluation & Optimization Platform</p>
+      </div>
+      
+      <div class="form-container">
+        <div class="form-title">Start Your Analysis</div>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin-bottom: 15px;
+          ">
+            🚀 Enhanced Recursive Analysis (Integrated)
+          </div>
+          <p style="color: #666; font-size: 0.9em; margin-top: 10px;">
+            All analyses now use the Recursive Review Extraction Strategy automatically
+          </p>
+        </div>
+        <form method="POST" class="search-form">
+          <div class="form-group full-width">
+            <label for="review_url">Amazon Review URL</label>
+            <input type="text" id="review_url" name="review_url" placeholder="https://www.amazon.com/product-reviews/..." required>
+          </div>
+          
+          <div class="form-group">
+            <label for="email">Amazon Email</label>
+            <input type="email" id="email" name="email" placeholder="your-email@example.com" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Amazon Password</label>
+            <input type="password" id="password" name="password" placeholder="Your password" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="review_type">Review Type</label>
+            <select id="review_type" name="review_type">
+              <option value="all">All Reviews</option>
+              <option value="positive">Positive (4★+)</option>
+              <option value="critical">Critical (1–3★)</option>
+            </select>
+          </div>
+          
+          <button type="submit" class="submit-btn">
+            🚀 Start Scraping Reviews
+          </button>
+        </form>
+        
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>Analyzing product reviews...</p>
+        </div>
+      </div>
+
+      <div class="metrics-section">
+        <div class="metrics-title">Previous Analysis Results</div>
+        <div class="metrics">
+          <div class="card">
+            <span class="card-icon">📦</span>
+            <div class="card-title">Total Reviews</div>
+            <div class="card-value">{{ reviews|length }}</div>
+          </div>
+          <div class="card">
+            <span class="card-icon">❌</span>
+            <div class="card-title">Defects Detected</div>
+            <div class="card-value">{{ defect_pairs|length }}</div>
+          </div>
+          <div class="card">
+            <span class="card-icon">😊</span>
+            <div class="card-title">Positive Reviews</div>
+            <div class="card-value">
+              {{ reviews
+                 | map(attribute='review_text')
+                 | map('lower')
+                 | map('analyze_sentiment')
+                 | select('equalto','positive')
+                 | list
+                 | length
+              }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <script>
+      // Show loading animation when form is submitted
+      document.querySelector('.search-form').addEventListener('submit', function() {
+        document.getElementById('loading').style.display = 'block';
+        document.querySelector('.submit-btn').disabled = true;
+        document.querySelector('.submit-btn').textContent = 'Processing...';
+      });
+      
+      // Scroll-triggered animations
+      function animateOnScroll() {
+        const elements = document.querySelectorAll('.animate-on-scroll');
+        elements.forEach(element => {
+          const elementTop = element.getBoundingClientRect().top;
+          const elementVisible = 150;
+          
+          if (elementTop < window.innerHeight - elementVisible) {
+            element.classList.add('visible');
+          }
+        });
+      }
+      
+      // Add scroll event listener
+      window.addEventListener('scroll', animateOnScroll);
+      
+      // Initial check for elements in view
+      animateOnScroll();
+      
+      // Enhanced form interactions
+      const formInputs = document.querySelectorAll('.form-group input, .form-group select');
+      formInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.style.transform = 'scale(1.02)';
+        });
+        
+        input.addEventListener('blur', function() {
+          this.parentElement.style.transform = 'scale(1)';
+        });
+      });
+      
+      // Particle interaction effect
+      document.addEventListener('mousemove', function(e) {
+        const particles = document.querySelectorAll('.particle');
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        particles.forEach((particle, index) => {
+          const rect = particle.getBoundingClientRect();
+          const particleX = rect.left + rect.width / 2;
+          const particleY = rect.top + rect.height / 2;
+          
+          const distance = Math.sqrt(
+            Math.pow(mouseX - particleX, 2) + Math.pow(mouseY - particleY, 2)
+          );
+          
+          if (distance < 100) {
+            particle.style.transform = `scale(${1.5 - distance / 100})`;
+            particle.style.opacity = `${0.8 - distance / 200}`;
+          } else {
+            particle.style.transform = 'scale(1)';
+            particle.style.opacity = '0.6';
+          }
+        });
+      });
+      
+      // Card hover effects enhancement
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.animationPlayState = 'paused';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+          this.style.animationPlayState = 'running';
+        });
+      });
+      
+      // Smooth reveal animation for page load
+      window.addEventListener('load', function() {
+        document.body.style.opacity = '0';
+        document.body.style.transition = 'opacity 1s ease-in-out';
+        
+        setTimeout(() => {
+          document.body.style.opacity = '1';
+        }, 100);
+      });
+      
+      // Enhanced button click effect
+      const submitBtn = document.querySelector('.submit-btn');
+      submitBtn.addEventListener('click', function(e) {
+        // Create ripple effect
+        const ripple = document.createElement('span');
+        const rect = this.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        ripple.classList.add('ripple');
+        
+        this.appendChild(ripple);
+        
+        setTimeout(() => {
+          ripple.remove();
+        }, 600);
+      });
+      
+      // Add ripple effect styles
+      const style = document.createElement('style');
+      style.textContent = `
+        .submit-btn {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .ripple {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.3);
+          transform: scale(0);
+          animation: ripple-animation 0.6s linear;
+          pointer-events: none;
+        }
+        
+        @keyframes ripple-animation {
+          to {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    </script>
+  </body>
+</html>
