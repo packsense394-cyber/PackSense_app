@@ -192,6 +192,22 @@ def analysis(product_folder):
         # Use all reviews for compatibility with existing template
         reviews = all_reviews
         
+        # Process review images to ensure they have proper URLs
+        for review in reviews:
+            if 'review_images' in review and review['review_images']:
+                processed_images = []
+                for img in review['review_images']:
+                    if isinstance(img, str):
+                        # If it's already a URL, keep it
+                        if img.startswith('http'):
+                            processed_images.append(img)
+                        else:
+                            # If it's a filename, convert to URL
+                            processed_images.append(url_for('static', filename=f"{product_folder}/review_images/{img}"))
+                    else:
+                        processed_images.append(str(img))
+                review['review_images'] = processed_images
+        
         print(f"Enhanced data loaded: {total_reviews} total reviews, {packaging_related} packaging-related")
         
     else:
@@ -209,6 +225,22 @@ def analysis(product_folder):
         positive_count = sum(1 for r in reviews if analyze_sentiment(str(r.get("review_text", ""))) == "positive")
         negative_count = sum(1 for r in reviews if analyze_sentiment(str(r.get("review_text", ""))) == "negative")
         neutral_count = total_reviews - positive_count - negative_count
+        
+        # Process review images to ensure they have proper URLs
+        for review in reviews:
+            if 'review_images' in review and review['review_images']:
+                processed_images = []
+                for img in review['review_images']:
+                    if isinstance(img, str):
+                        # If it's already a URL, keep it
+                        if img.startswith('http'):
+                            processed_images.append(img)
+                        else:
+                            # If it's a filename, convert to URL
+                            processed_images.append(url_for('static', filename=f"{product_folder}/review_images/{img}"))
+                    else:
+                        processed_images.append(str(img))
+                review['review_images'] = processed_images
         
         # Default values for enhanced features
         packaging_related = 0
@@ -245,6 +277,13 @@ def analysis(product_folder):
         packaging_keywords = packaging_terms_searched
         packaging_keywords_flat = packaging_terms_searched
         dropdown_data_flat = packaging_terms_searched + ['packaging', 'broken', 'leak', 'damaged', 'defective']
+        
+        # For enhanced data, we need to build the packaging frequency manually
+        packaging_freq = {}
+        for kw in packaging_keywords_flat:
+            count = sum(1 for r in reviews if kw.lower() in str(r.get("review_text", "")).lower())
+            if count > 0:
+                packaging_freq[kw] = count
     else:
         # Original packaging data loading logic
         try:
@@ -285,13 +324,13 @@ def analysis(product_folder):
         flat_pkg = packaging_keywords
         packaging_keywords_flat = flat_pkg
         dropdown_data_flat = sorted(set(['packaging', 'broken', 'leak', 'damaged', 'defective'] + flat_pkg))
-    
-    # Build packaging frequency
-    packaging_freq = {}
-    for kw in packaging_keywords_flat:
-        count = sum(1 for r in reviews if kw.lower() in str(r.get("review_text", "")).lower())
-        if count > 0:
-            packaging_freq[kw] = count
+        
+        # Build packaging frequency
+        packaging_freq = {}
+        for kw in packaging_keywords_flat:
+            count = sum(1 for r in reviews if kw.lower() in str(r.get("review_text", "")).lower())
+            if count > 0:
+                packaging_freq[kw] = count
     
     # Build keyword maps
     unique_keys = set(packaging_keywords_flat)
@@ -315,9 +354,57 @@ def analysis(product_folder):
     # Build keyword sentence map
     kw_sent = build_keyword_sentence_map(reviews, unique_keys)
     
-    # Load cooccurrence data (simplified for enhanced data)
+    # Load cooccurrence data
     if os.path.exists(recursive_analysis_file):
+        # For enhanced data, build cooccurrence from packaging terms
+        print("Building co-occurrence data for enhanced analysis...")
         cooccurrence_data = {}
+        
+        # Build co-occurrence matrix from packaging terms
+        if packaging_keywords_flat:
+            print(f"Building co-occurrence matrix for {len(packaging_keywords_flat)} terms")
+            # Create a simple co-occurrence matrix
+            for i, term1 in enumerate(packaging_keywords_flat):
+                for j, term2 in enumerate(packaging_keywords_flat):
+                    if i != j:
+                        # Count co-occurrences in reviews
+                        cooccurrence_count = 0
+                        for review in reviews:
+                            review_text = str(review.get("review_text", "")).lower()
+                            if term1.lower() in review_text and term2.lower() in review_text:
+                                cooccurrence_count += 1
+                        
+                        if cooccurrence_count > 0:
+                            if term1 not in cooccurrence_data:
+                                cooccurrence_data[term1] = {}
+                            cooccurrence_data[term1][term2] = cooccurrence_count
+            
+            print(f"Built co-occurrence data with {len(cooccurrence_data)} terms")
+            if cooccurrence_data:
+                print(f"Sample co-occurrence data: {list(cooccurrence_data.items())[:3]}")
+            else:
+                print("No co-occurrence relationships found")
+        else:
+            print("No packaging keywords found for co-occurrence analysis")
+            # Fallback: use all packaging terms from the recursive analysis
+            if 'packaging_terms_searched' in locals():
+                fallback_terms = packaging_terms_searched
+                print(f"Using fallback terms: {fallback_terms}")
+                cooccurrence_data = {}
+                for i, term1 in enumerate(fallback_terms):
+                    for j, term2 in enumerate(fallback_terms):
+                        if i != j:
+                            cooccurrence_count = 0
+                            for review in reviews:
+                                review_text = str(review.get("review_text", "")).lower()
+                                if term1.lower() in review_text and term2.lower() in review_text:
+                                    cooccurrence_count += 1
+                            
+                            if cooccurrence_count > 0:
+                                if term1 not in cooccurrence_data:
+                                    cooccurrence_data[term1] = {}
+                                cooccurrence_data[term1][term2] = cooccurrence_count
+                print(f"Built fallback co-occurrence data with {len(cooccurrence_data)} terms")
     else:
         try:
             excel_path = os.path.join(folder, f"{product_folder}_reviews_keywords_and_relationships.xlsx")
@@ -326,9 +413,47 @@ def analysis(product_folder):
         except:
             cooccurrence_data = {}
     
-    # Enhanced defect analysis (simplified for enhanced data)
+    # Build defect analysis
     if os.path.exists(recursive_analysis_file):
+        # For enhanced data, build defect pairs from packaging terms
+        print("Building defect analysis for enhanced data...")
         defect_pairs = []
+        
+        # Create a more flexible matching system
+        for term in packaging_terms_searched:
+            term_lower = term.lower()
+            
+            # Check if this term is a condition
+            is_condition = any(cond.lower() in term_lower or term_lower in cond.lower() 
+                             for cond in conditions_list)
+            
+            if is_condition:
+                # This is a condition term, find component terms it co-occurs with
+                for review in reviews:
+                    review_text = str(review.get("review_text", "")).lower()
+                    if term_lower in review_text:
+                        for comp in components_list:
+                            comp_lower = comp.lower()
+                            if comp_lower in review_text:
+                                defect_pairs.append((comp, term))
+        
+        defect_pairs = list(set(defect_pairs))  # Remove duplicates
+        print(f"Found {len(defect_pairs)} defect pairs")
+        
+        # If no defect pairs found with the above logic, try a more general approach
+        if not defect_pairs:
+            print("No defect pairs found with strict matching, trying general approach...")
+            for review in reviews:
+                review_text = str(review.get("review_text", "")).lower()
+                review_components = [comp for comp in components_list if comp.lower() in review_text]
+                review_conditions = [cond for cond in conditions_list if cond.lower() in review_text]
+                
+                for comp in review_components:
+                    for cond in review_conditions:
+                        defect_pairs.append((comp, cond))
+            
+            defect_pairs = list(set(defect_pairs))  # Remove duplicates
+            print(f"Found {len(defect_pairs)} defect pairs with general approach")
     else:
         # Original defect analysis logic
         try:
@@ -357,6 +482,38 @@ def analysis(product_folder):
         'has_enhanced_data': os.path.exists(recursive_analysis_file)
     }
     
+    # Build product description URL - point to our own product overview page
+    product_description_url = url_for('product_overview', product_folder=product_folder)
+    
+    # Add sentiment analysis to each review and ensure rating is integer
+    for review in reviews:
+        review['sentiment'] = analyze_sentiment(str(review.get("review_text", "")))
+        # Ensure rating is an integer
+        if 'rating' in review and review['rating'] is not None:
+            try:
+                if isinstance(review['rating'], str):
+                    # Remove any non-numeric characters and convert to int
+                    rating_str = str(review['rating']).replace('.', '').replace('-', '').replace('+', '')
+                    if rating_str.isdigit():
+                        review['rating'] = int(rating_str)
+                    else:
+                        review['rating'] = 0
+                else:
+                    review['rating'] = int(review['rating'])
+            except (ValueError, TypeError):
+                review['rating'] = 0
+        else:
+            review['rating'] = 0
+    
+    # Prepare review filtering data for sidebar
+    review_filters = {
+        'all_reviews': len(reviews),
+        'packaging_reviews': len([r for r in reviews if r.get('is_packaging_related', False)]),
+        'positive_reviews': len([r for r in reviews if r.get('sentiment') == "positive"]),
+        'neutral_reviews': len([r for r in reviews if r.get('sentiment') == "neutral"]),
+        'negative_reviews': len([r for r in reviews if r.get('sentiment') == "negative"])
+    }
+    
     return render_template(
         "results_enhanced.html",
         product_name=product_folder.replace('_', ' ').replace('-', ' '),
@@ -379,6 +536,71 @@ def analysis(product_folder):
         base_image_url=base_image_url,
         packaging_freq=packaging_freq,
         enhanced_metrics=enhanced_metrics,  # Pass enhanced metrics to template
+        product_description_url=product_description_url,  # Product description URL
+        review_filters=review_filters,  # Review filtering data for sidebar
+    )
+
+@app.route("/product_overview/<product_folder>")
+def product_overview(product_folder):
+    """Product overview page showing product details and summary"""
+    # Load data from the product folder
+    folder = os.path.join("static", product_folder)
+    
+    # Check if enhanced recursive analysis data exists
+    recursive_analysis_file = os.path.join(folder, "recursive_analysis.json")
+    if os.path.exists(recursive_analysis_file):
+        with open(recursive_analysis_file, 'r') as f:
+            recursive_data = json.load(f)
+        
+        # Use enhanced data
+        all_reviews = recursive_data.get('all_reviews', [])
+        total_reviews = recursive_data.get('total_reviews_extracted', 0)
+        packaging_related = recursive_data.get('packaging_related_reviews', 0)
+        packaging_percentage = recursive_data.get('packaging_percentage', 0)
+        
+        # Enhanced sentiment breakdown
+        sentiment_breakdown = recursive_data.get('sentiment_breakdown', {})
+        positive_count = sentiment_breakdown.get('positive', 0)
+        negative_count = sentiment_breakdown.get('negative', 0)
+        neutral_count = sentiment_breakdown.get('neutral', 0)
+    else:
+        # Fallback to original logic
+        excel_path = os.path.join(folder, f"{product_folder}_reviews_keywords_and_relationships.xlsx")
+        if os.path.exists(excel_path):
+            reviews_df = pd.read_excel(excel_path, sheet_name='Reviews')
+            all_reviews = reviews_df.to_dict('records')
+        else:
+            all_reviews = []
+        
+        # Calculate metrics
+        total_reviews = len(all_reviews)
+        positive_count = sum(1 for r in all_reviews if analyze_sentiment(str(r.get("review_text", ""))) == "positive")
+        negative_count = sum(1 for r in all_reviews if analyze_sentiment(str(r.get("review_text", ""))) == "negative")
+        neutral_count = total_reviews - positive_count - negative_count
+        
+        # Default values for enhanced features
+        packaging_related = 0
+        packaging_percentage = 0
+    
+    # Load product image
+    product_image_url = url_for('static', filename=f"{product_folder}/product.jpg")
+    
+    # Load sample reviews (first 5)
+    sample_reviews = all_reviews[:5] if all_reviews else []
+    
+    return render_template(
+        "product_overview.html",
+        product_name=product_folder.replace('_', ' ').replace('-', ' '),
+        product_folder=product_folder,
+        total_reviews=total_reviews,
+        packaging_related=packaging_related,
+        packaging_percentage=packaging_percentage,
+        positive_count=positive_count,
+        negative_count=negative_count,
+        neutral_count=neutral_count,
+        product_image_url=product_image_url,
+        sample_reviews=sample_reviews,
+        analysis_url=url_for('analysis', product_folder=product_folder)
     )
 
 @app.route("/enhanced_analyze", methods=["GET", "POST"])
@@ -677,4 +899,4 @@ scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5009, use_reloader=False) 
+    app.run(debug=True, port=5010, use_reloader=False) 

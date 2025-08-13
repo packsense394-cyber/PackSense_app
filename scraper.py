@@ -1127,7 +1127,6 @@ def scrape_recursive_packaging_reviews(
         
         # Step 2: Use predefined keyword sets to search in review search box
         print("Step 2: Searching for packaging-related terms...")
-        print("Note: Reviews search functionality may require authentication on Amazon")
         packaging_reviews = []
         all_packaging_terms = components_list + conditions_list
         
@@ -1154,49 +1153,43 @@ def scrape_recursive_packaging_reviews(
                 driver.get(base_url)
                 time.sleep(3)
                 
-                # Find and use search box - specifically for reviews search
+                # Find and use search box - improved selectors for reviews search bar
                 search_box = None
                 search_selectors = [
                     # Most specific selectors for reviews search
                     "//input[@placeholder='Search reviews']",
-                    "//input[@placeholder='Search customer reviews']",
-                    "//input[@aria-label='Search reviews']",
-                    "//input[@aria-label='Search customer reviews']",
                     "//input[@id='search-reviews']",
                     "//input[@name='search-reviews']",
-                    # Look for search box within reviews section
-                    "//div[contains(@class, 'reviews')]//input[@type='text']",
-                    "//div[contains(@class, 'review')]//input[@type='text']",
-                    "//section[contains(@class, 'reviews')]//input[@type='text']",
-                    "//div[@data-hook='reviews-medley']//input[@type='text']",
-                    # Look for search box near review filters
-                    "//div[contains(@class, 'filter')]//input[@type='text']",
-                    "//div[contains(@class, 'search')]//input[@type='text']",
-                    # More generic but still review-focused
+                    "//input[@aria-label='Search reviews']",
+                    "//input[@data-action='search-reviews']",
+                    # More general selectors
                     "//input[contains(@placeholder, 'review')]",
-                    "//input[contains(@placeholder, 'customer')]",
-                    # Last resort - any text input but exclude main search
-                    "//input[@type='text'][not(contains(@id, 'twotabsearch'))][not(contains(@name, 'search'))]"
+                    "//input[contains(@placeholder, 'Search')]",
+                    "//input[@aria-label*='review']",
+                    "//input[@aria-label*='Search']",
+                    # Fallback selectors
+                    "//input[contains(@class, 'search')]",
+                    "//input[@type='text']"
                 ]
                 
-                for selector in search_selectors:
+                print(f"Looking for reviews search box for term '{term}'...")
+                
+                for i, selector in enumerate(search_selectors):
                     try:
                         search_box = driver.find_element(By.XPATH, selector)
-                        print(f"Found search box with selector: {selector}")
-                        
-                        # Additional verification - make sure it's not the main search
-                        if "twotabsearch" in search_box.get_attribute("id") or "main-search" in search_box.get_attribute("class"):
-                            print("Skipping main search bar, looking for reviews search...")
-                            continue
-                            
+                        print(f"✅ Found search box with selector {i+1}: {selector}")
                         break
                     except NoSuchElementException:
+                        print(f"❌ Selector {i+1} failed: {selector}")
                         continue
                 
                 if search_box:
                     print(f"Searching for term '{term}' in reviews search bar...")
+                    # Clear the search box and enter the term
                     search_box.clear()
+                    time.sleep(1)
                     search_box.send_keys(term)
+                    time.sleep(1)
                     search_box.send_keys(Keys.RETURN)
                     time.sleep(3)
                     
@@ -1230,28 +1223,18 @@ def scrape_recursive_packaging_reviews(
                     packaging_reviews.extend(term_reviews)
                     print(f"  Found {len(term_reviews)} unique reviews for term '{term}'")
                 else:
-                    print(f"Could not find reviews search box for term '{term}'")
-                    print("Reviews search functionality may not be available or requires authentication")
-                    print("Trying alternative approach...")
+                    print(f"❌ Could not find reviews search box for term '{term}'")
+                    print("Available input elements on page:")
+                    try:
+                        inputs = driver.find_elements(By.TAG_NAME, "input")
+                        for inp in inputs[:10]:  # Show first 10 inputs
+                            placeholder = inp.get_attribute('placeholder') or 'No placeholder'
+                            id_attr = inp.get_attribute('id') or 'No id'
+                            aria_label = inp.get_attribute('aria-label') or 'No aria-label'
+                            print(f"  Input: placeholder='{placeholder}', id='{id_attr}', aria-label='{aria_label}'")
+                    except Exception as e:
+                        print(f"Error listing inputs: {e}")
                     
-                    # Alternative approach: Filter reviews from initial batch based on keyword presence
-                    print(f"  Filtering initial reviews for term '{term}'...")
-                    term_reviews = []
-                    
-                    for review in initial_reviews:
-                        review_text = review.get("review_text", "").lower()
-                        if term.lower() in review_text:
-                            review_id = review.get('review_id', review.get('review_text', ''))
-                            if review_id not in seen_review_ids:
-                                seen_review_ids.add(review_id)
-                                review_copy = review.copy()
-                                review_copy['search_term'] = term
-                                review_copy['is_packaging_related'] = True
-                                term_reviews.append(review_copy)
-                    
-                    packaging_reviews.extend(term_reviews)
-                    print(f"  Found {len(term_reviews)} reviews containing '{term}' from initial batch")
-                        
             except Exception as e:
                 print(f"Error searching for term '{term}': {e}")
                 continue

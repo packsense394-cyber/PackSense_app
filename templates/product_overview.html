@@ -301,8 +301,8 @@
         <!-- Left Section - Product Image -->
         <div class="product-image-section">
             <div class="product-image-container">
-                {% if base_image_url %}
-                    <img src="{{ base_image_url }}" alt="Product Image" class="product-image">
+                {% if product_image_url %}
+                    <img src="{{ product_image_url }}" alt="Product Image" class="product-image">
                 {% else %}
                     <div class="image-placeholder">
                         <i class="fas fa-image" style="font-size: 3em; opacity: 0.7;"></i>
@@ -323,24 +323,24 @@
                 
                 <div class="product-details">
                     <div class="detail-item">
-                        <span class="detail-label">Reviews Analyzed:</span>
+                        <span class="detail-label">Total Reviews:</span>
                         <span class="detail-value">{{ total_reviews or 0 }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Packaging Related:</span>
+                        <span class="detail-value">{{ packaging_related or 0 }} ({{ "%.1f"|format(packaging_percentage or 0) }}%)</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Positive Reviews:</span>
                         <span class="detail-value">{{ positive_count or 0 }}</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Defects Found:</span>
-                        <span class="detail-value">{{ defect_pairs|length if defect_pairs else 0 }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Analysis Date:</span>
-                        <span class="detail-value">{{ product_folder.split('_')[-1] if product_folder else 'N/A' }}</span>
+                        <span class="detail-label">Negative Reviews:</span>
+                        <span class="detail-value">{{ negative_count or 0 }}</span>
                     </div>
                 </div>
                 
-                <a href="{{ url_for('analysis', product_folder=product_folder) }}" class="analysis-button">
+                <a href="{{ analysis_url }}" class="analysis-button">
                     <i class="fas fa-chart-line"></i>
                     View Detailed Analysis
                 </a>
