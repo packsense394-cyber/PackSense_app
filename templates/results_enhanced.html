@@ -282,37 +282,74 @@
             letter-spacing: 0.5px;
         }
         
-        /* Enhanced analysis info */
-        .enhanced-info {
+        /* Word Cloud Styles */
+        .word-cloud-container {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 25px;
             border-radius: 15px;
             margin-bottom: 30px;
             text-align: center;
+            min-height: 300px;
+            position: relative;
         }
         
-        .enhanced-info h3 {
+        .word-cloud-container h3 {
             margin-bottom: 15px;
             font-size: 1.3em;
         }
         
-        .enhanced-stats {
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-top: 15px;
+        .word-cloud {
+            width: 100%;
+            height: 250px; /* Original height */
+            position: relative;
+            overflow: hidden;
         }
         
-        .enhanced-stat {
-            text-align: center;
+        .word-cloud-word {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            user-select: none;
         }
         
-        .enhanced-stat strong {
-            display: block;
-            font-size: 1.2em;
-            margin-bottom: 5px;
+        .word-cloud-word:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+        
+        .word-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .word-tooltip.show {
+            opacity: 1;
+        }
+        
+        .word-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
         }
         
         /* Reviews section */
@@ -839,25 +876,15 @@
                 </div>
             </div>
 
-            <!-- Enhanced Analysis Info -->
+            <!-- Packaging Keyword Frequencies Word Cloud -->
             {% if enhanced_metrics.has_enhanced_data %}
-            <div class="enhanced-info">
-                <h3><i class="fas fa-rocket"></i> Enhanced Recursive Analysis</h3>
-                <p>This analysis used the Recursive Review Extraction Strategy to provide comprehensive packaging insights.</p>
-                <div class="enhanced-stats">
-                    <div class="enhanced-stat">
-                        <strong>Initial Reviews</strong>
-                        <span>{{ enhanced_metrics.total_reviews - enhanced_metrics.packaging_related }}</span>
-                    </div>
-                    <div class="enhanced-stat">
-                        <strong>Packaging Reviews</strong>
-                        <span>{{ enhanced_metrics.packaging_related }}</span>
-                    </div>
-                    <div class="enhanced-stat">
-                        <strong>Packaging Coverage</strong>
-                        <span>{{ "%.1f"|format(enhanced_metrics.packaging_percentage) }}%</span>
-                    </div>
+            <div class="word-cloud-container">
+                <h3><i class="fas fa-cloud"></i> Packaging Keyword Frequencies</h3>
+                <p>Hover over words to see their frequency in packaging-related reviews</p>
+                <div class="word-cloud" id="word-cloud">
+                    <!-- Word cloud will be generated here -->
                 </div>
+                <div class="word-tooltip" id="word-tooltip"></div>
             </div>
             {% endif %}
 
@@ -882,23 +909,28 @@
                             </div>
                             <div class="review-rating">
                                 <div class="stars">
-                                    {% set rating = 0 %}
-                                    {% if review.rating %}
-                                        {% if review.rating is string %}
-                                            {% set rating = review.rating|replace('.', '')|replace('-', '')|replace('+', '')|int %}
-                                        {% else %}
-                                            {% set rating = review.rating|int %}
-                                        {% endif %}
+                                    {% if review.rating and review.rating is not none %}
+                                        {% set rating = review.rating|float %}
+                                        {% for i in range(5) %}
+                                            {% if i < rating %}
+                                                <i class="fas fa-star" style="color: #FFD700;"></i>
+                                            {% else %}
+                                                <i class="far fa-star" style="color: #FFD700;"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {% for i in range(5) %}
+                                            <i class="far fa-star" style="color: #ccc;"></i>
+                                        {% endfor %}
                                     {% endif %}
-                                    {% for i in range(5) %}
-                                        {% if i < rating %}
-                                            <i class="fas fa-star"></i>
-                                        {% else %}
-                                            <i class="far fa-star"></i>
-                                        {% endif %}
-                                    {% endfor %}
                                 </div>
-                                <span style="margin-left: 10px; font-weight: 600;">{{ review.rating or 'N/A' }}/5</span>
+                                <span style="margin-left: 10px; font-weight: 600;">
+                                    {% if review.rating and review.rating is not none %}
+                                        {{ "%.1f"|format(review.rating) }}/5
+                                    {% else %}
+                                        N/A/5
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="review-date">{{ review.review_date or 'Date not available' }}</div>
                         </div>
@@ -992,6 +1024,11 @@
     <script>
 
         
+        // Global variables for review data
+        window.reviewsData = [];
+        window.keywordSentenceMap = {};
+        window.keywordImageMap = {};
+        
         // Global variables for pagination and filtering
         let currentPage = 1;
         let currentFilter = 'all';
@@ -1000,6 +1037,9 @@
         
         // Review filtering functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Load review data into global variables
+            console.log('Loading review data into global variables...');
+            // Data will be loaded from the backend when showNodeDetails is called
             const filterButtons = document.querySelectorAll('.review-filter');
             const reviewCards = document.querySelectorAll('.review-card');
             const visibleCount = document.getElementById('visible-count');
@@ -1044,6 +1084,230 @@
                     updatePagination();
                 });
             });
+        });
+        
+        // Word Cloud Generation - Efficient Space Usage with No Overlap
+        function generateWordCloud() {
+            const wordCloudContainer = document.getElementById('word-cloud');
+            const tooltip = document.getElementById('word-tooltip');
+            
+            if (!wordCloudContainer) return;
+            
+            // Get keyword frequency data from the backend
+            const keywordData = JSON.parse('{{ keyword_frequencies|tojson|safe }}');
+            
+            if (!keywordData || Object.keys(keywordData).length === 0) {
+                wordCloudContainer.innerHTML = '<p style="color: white; margin-top: 50px;">No keyword data available</p>';
+                return;
+            }
+            
+            // Clear existing content
+            wordCloudContainer.innerHTML = '';
+            
+            // Convert to array and sort by frequency - SHOW ALL WORDS
+            const words = Object.entries(keywordData)
+                .map(([word, count]) => ({ word, count }))
+                .sort((a, b) => b.count - a.count);
+            
+            const containerWidth = wordCloudContainer.offsetWidth;
+            const containerHeight = wordCloudContainer.offsetHeight;
+            
+            // Color palette for different frequency ranges
+            const colors = ['#FFD700', '#FFA500', '#FF6347', '#FF4500', '#FF0000'];
+            
+            // Store placed words for collision detection
+            const placedWords = [];
+            
+            words.forEach((item, index) => {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'word-cloud-word';
+                wordElement.textContent = item.word;
+                
+                // Use same font size for all words
+                const fontSize = 20;
+                wordElement.style.fontSize = fontSize + 'px';
+                
+                // Assign color based on frequency
+                const colorIndex = Math.min(Math.floor(item.count / 10), colors.length - 1);
+                wordElement.style.color = colors[colorIndex];
+                
+                // Calculate word dimensions with efficient padding
+                const wordWidth = item.word.length * fontSize * 0.6 + 35;
+                const wordHeight = fontSize * 1.2 + 35;
+                
+                // Try to find a non-overlapping position with efficient spacing
+                let position = null;
+                let attempts = 0;
+                
+                // Strategy 1: Efficient spiral placement from center
+                while (attempts < 200 && !position) {
+                    const centerX = containerWidth / 2;
+                    const centerY = containerHeight / 2;
+                    const radius = 20 + (attempts * 1.5);
+                    const angle = attempts * 0.4;
+                    
+                    const x = centerX + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    
+                    if (x >= 0 && x <= containerWidth - wordWidth && 
+                        y >= 0 && y <= containerHeight - wordHeight) {
+                        
+                        let hasCollision = false;
+                        for (const placed of placedWords) {
+                            const distance = Math.sqrt(
+                                Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
+                            );
+                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
+                            
+                            if (distance < minDistance) {
+                                hasCollision = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!hasCollision) {
+                            position = { x, y };
+                        }
+                    }
+                    attempts++;
+                }
+                
+                // Strategy 2: Efficient random placement
+                if (!position) {
+                    for (let i = 0; i < 150; i++) {
+                        const x = Math.random() * (containerWidth - wordWidth);
+                        const y = Math.random() * (containerHeight - wordHeight);
+                        
+                        let hasCollision = false;
+                        for (const placed of placedWords) {
+                            const distance = Math.sqrt(
+                                Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
+                            );
+                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
+                            
+                            if (distance < minDistance) {
+                                hasCollision = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!hasCollision) {
+                            position = { x, y };
+                            break;
+                        }
+                    }
+                }
+                
+                // Strategy 3: Efficient grid-based placement
+                if (!position) {
+                    const gridSize = Math.max(wordWidth, wordHeight) + 30;
+                    const cols = Math.floor(containerWidth / gridSize);
+                    const rows = Math.floor(containerHeight / gridSize);
+                    
+                    for (let row = 0; row < rows; row++) {
+                        for (let col = 0; col < cols; col++) {
+                            const x = col * gridSize + (gridSize - wordWidth) / 2;
+                            const y = row * gridSize + (gridSize - wordHeight) / 2;
+                            
+                            let hasCollision = false;
+                            for (const placed of placedWords) {
+                                const distance = Math.sqrt(
+                                    Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
+                                );
+                                const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 30;
+                                
+                                if (distance < minDistance) {
+                                    hasCollision = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!hasCollision) {
+                                position = { x, y };
+                                break;
+                            }
+                        }
+                        if (position) break;
+                    }
+                }
+                
+                // Strategy 4: Edge placement
+                if (!position) {
+                    const edges = [
+                        {x: 10, y: 10},
+                        {x: containerWidth - wordWidth - 10, y: 10},
+                        {x: 10, y: containerHeight - wordHeight - 10},
+                        {x: containerWidth - wordWidth - 10, y: containerHeight - wordHeight - 10},
+                        {x: containerWidth / 2 - wordWidth / 2, y: 10},
+                        {x: containerWidth / 2 - wordWidth / 2, y: containerHeight - wordHeight - 10},
+                        {x: 10, y: containerHeight / 2 - wordHeight / 2},
+                        {x: containerWidth - wordWidth - 10, y: containerHeight / 2 - wordHeight / 2}
+                    ];
+                    
+                    for (const edge of edges) {
+                        let hasCollision = false;
+                        for (const placed of placedWords) {
+                            const distance = Math.sqrt(
+                                Math.pow(edge.x - placed.x, 2) + Math.pow(edge.y - placed.y, 2)
+                            );
+                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
+                            
+                            if (distance < minDistance) {
+                                hasCollision = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!hasCollision) {
+                            position = edge;
+                            break;
+                        }
+                    }
+                }
+                
+                // Final fallback - place with minimum spacing
+                if (!position) {
+                    position = {
+                        x: Math.random() * (containerWidth - wordWidth),
+                        y: Math.random() * (containerHeight - wordHeight)
+                    };
+                }
+                
+                wordElement.style.left = position.x + 'px';
+                wordElement.style.top = position.y + 'px';
+                
+                // Store word info for collision detection
+                placedWords.push({
+                    x: position.x + wordWidth / 2,
+                    y: position.y + wordHeight / 2,
+                    width: wordWidth,
+                    height: wordHeight
+                });
+                
+                // Add hover events with tooltip positioned above the word
+                wordElement.addEventListener('mouseenter', function(e) {
+                    tooltip.textContent = `${item.word}: ${item.count} occurrences`;
+                    
+                    // Position tooltip above the word
+                    const rect = wordElement.getBoundingClientRect();
+                    const containerRect = wordCloudContainer.getBoundingClientRect();
+                    
+                    tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+                    tooltip.style.top = (rect.top - containerRect.top - 35) + 'px';
+                    tooltip.classList.add('show');
+                });
+                
+                wordElement.addEventListener('mouseleave', function() {
+                    tooltip.classList.remove('show');
+                });
+                
+                wordCloudContainer.appendChild(wordElement);
+            });
+        }
+        
+        // Initialize word cloud when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            generateWordCloud();
         });
         
         // Update visible count
@@ -1234,10 +1498,23 @@
                 font-size: 0.9em;
             `;
             resetButton.onclick = function() {
-                // Reset all nodes and links to normal
-                node.attr('opacity', 1);
-                link.attr('stroke-opacity', 0.6).attr('stroke-width', d => Math.sqrt(d.weight) * 2);
-                infoPanel.style.display = 'none';
+                                    // Reset all nodes and links to normal
+                    node.attr('opacity', 1);
+                    link.attr('stroke-opacity', 0.8).attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5));
+                
+                // Reset info panel to default content
+                infoPanel.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 50px 20px;">
+                        <h3 style="margin: 0 0 20px 0; color: #333;">Co-occurrence Network</h3>
+                        <p style="margin: 0; font-size: 1.1em;">Click on any node to see related reviews and images</p>
+                        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin: 0 0 15px 0; color: #333;">Network Information</h4>
+                            <p style="margin: 5px 0; color: #666;"><strong>Total Nodes:</strong> <span id="node-count">-</span></p>
+                            <p style="margin: 5px 0; color: #666;"><strong>Total Connections:</strong> <span id="link-count">-</span></p>
+                            <p style="margin: 5px 0; color: #666;"><strong>Packaging Terms:</strong> <span id="term-count">-</span></p>
+                        </div>
+                    </div>
+                `;
             };
             
             titleContainer.appendChild(title);
@@ -1275,8 +1552,22 @@
                 padding: 25px;
                 max-height: 100%;
                 overflow-y: auto;
-                display: none;
+                display: block;
                 box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+            `;
+            
+            // Add default content to info panel
+            infoPanel.innerHTML = `
+                <div style="text-align: center; color: #666; padding: 50px 20px;">
+                    <h3 style="margin: 0 0 20px 0; color: #333;">Co-occurrence Network</h3>
+                    <p style="margin: 0; font-size: 1.1em;">Click on any node to see related reviews and images</p>
+                    <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin: 0 0 15px 0; color: #333;">Network Information</h4>
+                        <p style="margin: 5px 0; color: #666;"><strong>Total Nodes:</strong> <span id="node-count">-</span></p>
+                        <p style="margin: 5px 0; color: #666;"><strong>Total Connections:</strong> <span id="link-count">-</span></p>
+                        <p style="margin: 5px 0; color: #666;"><strong>Packaging Terms:</strong> <span id="term-count">-</span></p>
+                    </div>
+                </div>
             `;
             
             networkContainer.appendChild(svgContainer);
@@ -1403,46 +1694,51 @@
             
             console.log('Container dimensions:', width, height);
             
-            // Create force simulation with better parameters
+            // Create force simulation with better parameters for clearer visualization
             const simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(150))
-                .force('charge', d3.forceManyBody().strength(-500))
+                .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+                .force('charge', d3.forceManyBody().strength(-300))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(60))
-                .force('x', d3.forceX(width / 2).strength(0.1))
-                .force('y', d3.forceY(height / 2).strength(0.1));
+                .force('collision', d3.forceCollide().radius(40))
+                .force('x', d3.forceX(width / 2).strength(0.05))
+                .force('y', d3.forceY(height / 2).strength(0.05));
             
-            // Create links
+            // Create links with clearer styling
             const link = svg.append('g')
                 .selectAll('line')
                 .data(links)
                 .enter().append('line')
-                .attr('stroke', '#999')
-                .attr('stroke-opacity', 0.6)
-                .attr('stroke-width', d => Math.sqrt(d.weight) * 2);
+                .attr('stroke', '#4a90e2')
+                .attr('stroke-opacity', 0.8)
+                .attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5))
+                .style('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))');
             
-            // Create nodes with better interaction
+            // Create nodes with smaller, more consistent sizing
             const node = svg.append('g')
                 .selectAll('circle')
                 .data(nodes)
                 .enter().append('circle')
-                .attr('r', d => Math.max(25, Math.sqrt(d.connections) * 10))
-                .attr('fill', d => getNodeColor(d.connections))
-                .attr('stroke', '#fff')
-                .attr('stroke-width', 3)
+                .attr('r', d => Math.max(15, Math.sqrt(d.connections) * 6))
+                .attr('fill', d => {
+                    console.log(`Setting color for node "${d.name}" with ${d.connections} connections`);
+                    return getNodeColor(d.connections);
+                })
+                .attr('stroke', '#ffffff')
+                .attr('stroke-width', 2)
                 .style('cursor', 'pointer')
                 .style('transition', 'all 0.3s ease')
+                .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))')
                 .on('mouseover', function(event, d) {
                     console.log('Mouse over node:', d.name);
                     
-                    // Enlarge the node
-                    d3.select(this).attr('r', d => Math.max(35, Math.sqrt(d.connections) * 12));
+                    // Enlarge the node slightly
+                    d3.select(this).attr('r', d => Math.max(20, Math.sqrt(d.connections) * 8));
                     
-                    // Highlight connected links
+                    // Highlight connected links with clearer visibility
                     link.attr('stroke-opacity', l => 
-                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
+                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.2
                     ).attr('stroke-width', l => 
-                        l.source.id === d.id || l.target.id === d.id ? 4 : 2
+                        l.source.id === d.id || l.target.id === d.id ? Math.max(2, Math.sqrt(l.weight) * 2) : Math.max(0.5, Math.sqrt(l.weight) * 0.8)
                     );
                     
                     // Highlight connected nodes
@@ -1450,17 +1746,17 @@
                         n.id === d.id || links.some(l => 
                             (l.source.id === d.id && l.target.id === n.id) ||
                             (l.target.id === d.id && l.source.id === n.id)
-                        ) ? 1 : 0.3
+                        ) ? 1 : 0.4
                     );
                 })
                 .on('mouseout', function(event, d) {
                     console.log('Mouse out node:', d.name);
                     
                     // Reset node size
-                    d3.select(this).attr('r', d => Math.max(25, Math.sqrt(d.connections) * 10));
+                    d3.select(this).attr('r', d => Math.max(15, Math.sqrt(d.connections) * 6));
                     
                     // Reset link opacity and width
-                    link.attr('stroke-opacity', 0.6).attr('stroke-width', d => Math.sqrt(d.weight) * 2);
+                    link.attr('stroke-opacity', 0.8).attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5));
                     
                     // Reset node opacity
                     node.attr('opacity', 1);
@@ -1469,14 +1765,18 @@
                     console.log('Clicked node:', d.name);
                     event.stopPropagation();
                     
-                    // Show detailed information and make info panel visible
+                    // Show detailed information in info panel
                     showNodeDetails(d, infoPanel);
-                    infoPanel.style.display = 'block';
                     
-                    // Highlight selected node and blur others
-                    node.attr('opacity', n => n.id === d.id ? 1 : 0.2);
+                    // Highlight selected node and connected nodes
+                    node.attr('opacity', n => 
+                        n.id === d.id || links.some(l => 
+                            (l.source.id === d.id && l.target.id === n.id) ||
+                            (l.target.id === d.id && l.source.id === n.id)
+                        ) ? 1 : 0.4
+                    );
                     link.attr('stroke-opacity', l => 
-                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
+                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.2
                     );
                 });
             
@@ -1488,12 +1788,12 @@
                 .text(d => d.name)
                 .attr('text-anchor', 'middle')
                 .attr('dy', '.35em')
-                .attr('font-size', '14px')
-                .attr('font-weight', 'bold')
-                .attr('fill', '#333')
+                .attr('font-size', '12px')
+                .attr('font-weight', '600')
+                .attr('fill', '#2c3e50')
                 .style('pointer-events', 'none')
-                .style('text-shadow', '1px 1px 2px rgba(255,255,255,0.8)')
-                .style('font-family', 'Inter, sans-serif');
+                .style('text-shadow', '0 1px 2px rgba(255,255,255,0.9)')
+                .style('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif');
             
             // Set initial positions to spread nodes out
             nodes.forEach((node, i) => {
@@ -1502,6 +1802,15 @@
                 node.x = width / 2 + radius * Math.cos(angle);
                 node.y = height / 2 + radius * Math.sin(angle);
             });
+            
+            // Update network statistics in info panel
+            const nodeCountElement = document.getElementById('node-count');
+            const linkCountElement = document.getElementById('link-count');
+            const termCountElement = document.getElementById('term-count');
+            
+            if (nodeCountElement) nodeCountElement.textContent = nodes.length;
+            if (linkCountElement) linkCountElement.textContent = links.length;
+            if (termCountElement) termCountElement.textContent = nodes.length;
             
             // Update positions on simulation tick
             simulation.on('tick', () => {
@@ -1569,12 +1878,10 @@
             `;
         }
         
-        // Get node color based on connections
+        // Get node color - consistent purple for all nodes
         function getNodeColor(connections) {
-            if (connections > 10) return '#ff6b6b';
-            if (connections > 5) return '#4ecdc4';
-            if (connections > 2) return '#45b7d1';
-            return '#96ceb4';
+            console.log(`Node with ${connections} connections getting purple color`);
+            return '#9b59b6';  // Purple for all nodes regardless of connections
         }
         
         // Show node information on hover
@@ -1596,96 +1903,416 @@
         
         // Show detailed node information on click
         function showNodeDetails(node, infoPanel) {
-            // Get related reviews and images
-            const reviews = JSON.parse('{{ reviews|tojson|safe }}');
-            const relatedReviews = reviews.filter(review => 
-                review.review_text && review.review_text.toLowerCase().includes(node.name.toLowerCase())
-            );
+            console.log('showNodeDetails called for node:', node.name);
             
-            // Get related images
-            const relatedImages = [];
-            reviews.forEach(review => {
-                if (review.review_images && review.review_images.length > 0) {
-                    review.review_images.forEach(img => {
-                        if (img.toLowerCase().includes(node.name.toLowerCase()) || 
-                            review.review_text.toLowerCase().includes(node.name.toLowerCase())) {
-                            relatedImages.push({
-                                url: img,
-                                reviewer: review.reviewer_name || 'Anonymous',
-                                review_text: review.review_text.substring(0, 50) + '...'
+            // Get related reviews and images - restore working functionality
+            let reviews = [];
+            let keywordSentenceMap = {};
+            let keywordImageMap = {};
+            
+            // Load data from template variables with more robust error handling
+            try {
+                console.log('Raw template data - reviews length:', '{{ reviews|tojson|safe }}'.length);
+                console.log('Raw template data - sentence map length:', '{{ keyword_sentence_map|tojson|safe }}'.length);
+                console.log('Raw template data - image map length:', '{{ keyword_image_map|tojson|safe }}'.length);
+                
+                // Try parsing with error recovery
+                const rawReviews = '{{ reviews|tojson|safe }}';
+                const rawSentenceMap = '{{ keyword_sentence_map|tojson|safe }}';
+                const rawImageMap = '{{ keyword_image_map|tojson|safe }}';
+                
+                console.log('Raw sentence map starts with:', rawSentenceMap.substring(0, 100));
+                console.log('Raw image map starts with:', rawImageMap.substring(0, 100));
+                
+                // Parse with error recovery
+                try {
+                    reviews = JSON.parse(rawReviews);
+                } catch (e) {
+                    console.error('Failed to parse reviews:', e.message);
+                    reviews = [];
+                }
+                
+                try {
+                    keywordSentenceMap = JSON.parse(rawSentenceMap);
+                } catch (e) {
+                    console.error('Failed to parse sentence map:', e.message);
+                    console.error('Error at position:', e.message.match(/position (\d+)/)?.[1] || 'unknown');
+                    // Try to extract what we can
+                    keywordSentenceMap = {};
+                    try {
+                        // Look for simple key-value pairs
+                        const matches = rawSentenceMap.match(/"([^"]+)":\s*\[([^\]]+)\]/g);
+                        if (matches) {
+                            matches.forEach(match => {
+                                const keyMatch = match.match(/"([^"]+)":/);
+                                if (keyMatch) {
+                                    keywordSentenceMap[keyMatch[1]] = [];
+                                }
                             });
                         }
-                    });
+                    } catch (extractError) {
+                        console.error('Failed to extract partial data:', extractError.message);
+                    }
                 }
-            });
+                
+                try {
+                    keywordImageMap = JSON.parse(rawImageMap);
+                } catch (e) {
+                    console.error('Failed to parse image map:', e.message);
+                    keywordImageMap = {};
+                }
+                
+                console.log('Successfully loaded data - reviews:', reviews.length, 'sentence map keys:', Object.keys(keywordSentenceMap).length);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                console.error('Error details:', error.message);
+                // Fallback to empty data
+                reviews = [];
+                keywordSentenceMap = {};
+                keywordImageMap = {};
+            }
+            
+            // Force display the info panel first
+            infoPanel.style.display = 'block';
+            infoPanel.style.visibility = 'visible';
+            infoPanel.style.opacity = '1';
+            infoPanel.innerHTML = '<p>Loading...</p>';
+            
+            // Debug: Check if info panel is visible
+            console.log('Info panel display style:', infoPanel.style.display);
+            console.log('Info panel visibility:', infoPanel.style.visibility);
+            console.log('Info panel opacity:', infoPanel.style.opacity);
+            console.log('Info panel offsetHeight:', infoPanel.offsetHeight);
+            console.log('Info panel offsetWidth:', infoPanel.offsetWidth);
+            
+            console.log('=== DEBUGGING RELATED CONTENT ===');
+            console.log('Raw keyword sentence map:', keywordSentenceMap);
+            console.log('Raw keyword image map:', keywordImageMap);
+            console.log('Keyword sentence map keys:', Object.keys(keywordSentenceMap));
+            console.log('Keyword image map keys:', Object.keys(keywordImageMap));
+            console.log('Node name being searched:', node.name);
+            console.log('Node name type:', typeof node.name);
+            console.log('Node name in sentence map?', node.name in keywordSentenceMap);
+            console.log('Node name in image map?', node.name in keywordImageMap);
+            
+            // Check for case variations
+            console.log('Checking case variations...');
+            const lowerCaseName = node.name.toLowerCase();
+            console.log('Lowercase name:', lowerCaseName);
+            console.log('Lowercase name in sentence map?', lowerCaseName in keywordSentenceMap);
+            
+            // Check for partial matches
+            const matchingKeys = Object.keys(keywordSentenceMap).filter(key => 
+                key.toLowerCase() === lowerCaseName
+            );
+            console.log('Matching keys (case-insensitive):', matchingKeys);
+            
+            // Get related reviews using keyword sentence map (try different case variations)
+            let relatedReviews = keywordSentenceMap[node.name] || [];
+            if (relatedReviews.length === 0) {
+                // Try lowercase
+                relatedReviews = keywordSentenceMap[node.name.toLowerCase()] || [];
+            }
+            if (relatedReviews.length === 0) {
+                // Try to find by partial match
+                const matchingKey = Object.keys(keywordSentenceMap).find(key => 
+                    key.toLowerCase() === node.name.toLowerCase()
+                );
+                if (matchingKey) {
+                    relatedReviews = keywordSentenceMap[matchingKey] || [];
+                }
+            }
+            
+            // Extract full review information from the dictionary structure
+            let relatedReviewsData = [];
+            if (relatedReviews.length > 0) {
+                if (typeof relatedReviews[0] === 'object' && relatedReviews[0].sentence) {
+                    // Extract full review data from dictionary structure
+                    relatedReviewsData = relatedReviews.map(item => ({
+                        sentence: item.sentence,
+                        review_text: item.review_text,
+                        review_title: item.review_title,
+                        review_index: item.review_index
+                    }));
+                } else {
+                    // Fallback: if it's already in string format, create basic structure
+                    relatedReviewsData = relatedReviews.map((text, index) => ({
+                        sentence: text,
+                        review_text: text,
+                        review_title: '',
+                        review_index: index
+                    }));
+                }
+            }
+            
+            // Get related images using keyword image map (try different case variations)
+            let relatedImages = keywordImageMap[node.name] || [];
+            if (relatedImages.length === 0) {
+                // Try lowercase
+                relatedImages = keywordImageMap[node.name.toLowerCase()] || [];
+            }
+            if (relatedImages.length === 0) {
+                // Try to find by partial match
+                const matchingKey = Object.keys(keywordImageMap).find(key => 
+                    key.toLowerCase() === node.name.toLowerCase()
+                );
+                if (matchingKey) {
+                    relatedImages = keywordImageMap[matchingKey] || [];
+                }
+            }
+            console.log('Related images for', node.name, ':', relatedImages);
+            console.log('Related images length for', node.name, ':', relatedImages.length);
+            
+            // Add a simple test to verify the function is working
+            console.log('=== FUNCTION WORKING TEST ===');
+            console.log('Info panel element:', infoPanel);
+            console.log('Info panel display style:', infoPanel.style.display);
+            
+            // Convert related images to the expected format
+            const formattedImages = relatedImages.map(imgUrl => ({
+                url: imgUrl,
+                reviewer: 'Reviewer', // We don't have individual reviewer info for images
+                review_text: 'Related image'
+            }));
+            
+            // Use the full review data from keyword sentence map
+            let reviewsContainingKeyword = [];
+            const keyword = node.name.toLowerCase(); // Define keyword variable
+            
+            if (relatedReviewsData.length > 0) {
+                // Use the data from keyword sentence map which contains full review info
+                reviewsContainingKeyword = relatedReviewsData.map((item, index) => {
+                    // Get the original review data using review_index
+                    const originalReview = reviews[item.review_index] || {};
+                    return {
+                        reviewer_name: originalReview.reviewer_name || `Reviewer ${index + 1}`,
+                        review_date: originalReview.review_date || 'Date not available',
+                        review_rating: originalReview.rating || 'Rating not available',
+                        review_text: item.review_text, // Full review text
+                        sentence: item.sentence, // The specific sentence containing the keyword
+                        review_title: item.review_title || '',
+                        review_index: item.review_index
+                    };
+                });
+            } else {
+                // Fallback to filtering reviews
+                console.log('Falling back to review filtering for:', keyword);
+                reviewsContainingKeyword = reviews.filter(review => {
+                    const reviewText = (review.review_text || '').toLowerCase();
+                    return reviewText.includes(keyword);
+                });
+            }
+            
+            console.log('Reviews containing keyword:', reviewsContainingKeyword.length);
+            if (reviewsContainingKeyword.length > 0) {
+                console.log('Sample review:', reviewsContainingKeyword[0]);
+            }
+            
+            // Store the filtered reviews globally for toggleReviewDisplay to use
+            window.currentFilteredReviews = reviewsContainingKeyword;
+            
+            // Function to find sentence containing keyword
+            function findSentenceWithKeyword(text, keyword) {
+                if (!text || !keyword) return text;
+                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                for (let sentence of sentences) {
+                    if (sentence.toLowerCase().includes(keyword)) {
+                        return sentence.trim() + '.';
+                    }
+                }
+                return text.substring(0, 200) + (text.length > 200 ? '...' : '');
+            }
             
             let content = `
-                <div style="height: 100%; overflow-y: auto;">
-                    <h3 style="margin: 0 0 20px 0; color: #333; text-align: center; padding-bottom: 15px; border-bottom: 2px solid #667eea;">${node.name.toUpperCase()}</h3>
-                    
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <p style="margin: 5px 0; color: #666;">
-                            <strong>Connections:</strong> ${node.connections}
-                        </p>
-                        <p style="margin: 5px 0; color: #666;">
-                            <strong>Total Weight:</strong> ${node.totalWeight}
-                        </p>
+                <div style="height: 100%; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); text-align: center;">
+                        <h2 style="margin: 0 0 15px 0; font-size: 2.2em; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${node.name.toUpperCase()}</h2>
+                        <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${node.connections}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Connections</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${node.totalWeight}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Total Weight</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${reviewsContainingKeyword.length}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Reviews Found</div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <h4 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center;">
-                        <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 8px;">${relatedReviews.length}</span>
-                        Related Sentences
-                    </h4>
+                    <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 20px 0; color: #333; display: flex; align-items: center; font-size: 1.4em; font-weight: 600;">
+                            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; margin-right: 12px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">${reviewsContainingKeyword.length}</span>
+                            Reviews Containing "${node.name}"
+                        </h3>
             `;
             
-            if (relatedReviews.length > 0) {
-                relatedReviews.slice(0, 5).forEach((review, index) => {
-                    const reviewText = review.review_text.substring(0, 150) + '...';
-                    content += `
-                        <div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
-                            <p style="margin: 0 0 8px 0; font-size: 0.9em; color: #333; line-height: 1.4;">${reviewText}</p>
-                            <p style="margin: 0; font-size: 0.8em; color: #666;">
-                                <strong>By:</strong> ${review.reviewer_name || 'Anonymous'}
-                                ${review.review_date ? `<br><strong>Date:</strong> ${review.review_date}` : ''}
-                            </p>
-                        </div>
-                    `;
-                });
+            if (reviewsContainingKeyword.length > 0) {
+                            // Store current keyword and reviews globally for pagination
+            window.currentKeyword = keyword;
+            window.allReviews = reviewsContainingKeyword;
+            window.currentFilteredReviews = reviewsContainingKeyword;
+            window.currentReviewPage = 1;
+            window.reviewsPerPage = 5;
+            
+            // Calculate pagination
+            const totalReviewPages = Math.ceil(reviewsContainingKeyword.length / window.reviewsPerPage);
+            const startIndex = 0;
+            const endIndex = Math.min(window.reviewsPerPage, reviewsContainingKeyword.length);
+            
+            // Display first page of reviews
+            content += `<div class="reviews-section">`;
+            reviewsContainingKeyword.slice(startIndex, endIndex).forEach((review, displayIndex) => {
+                const actualIndex = startIndex + displayIndex; // Calculate the actual index in the full reviews array
+                const sentenceWithKeyword = findSentenceWithKeyword(review.review_text, keyword);
+                const highlightedSentence = highlightKeyword(sentenceWithKeyword, keyword);
                 
-                if (relatedReviews.length > 5) {
-                    content += `<p style="font-size: 0.8em; color: #999; text-align: center; margin: 10px 0;">... and ${relatedReviews.length - 5} more reviews</p>`;
-                }
-            } else {
-                content += `<p style="font-size: 0.9em; color: #999; font-style: italic;">No related sentences found</p>`;
+                content += `
+                    <div id="review-${displayIndex}" style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; border: 1px solid #e8e8e8;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-weight: 600; font-size: 1.1em;">${review.reviewer_name || review.reviewer || 'Anonymous'}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">${formatDate(review.review_date || review.date || 'Unknown date')}</div>
+                            </div>
+                        </div>
+                        
+                        <div id="sentence-${displayIndex}" style="padding: 20px;">
+                            <!-- Show rating if available -->
+                            ${review.review_rating && review.review_rating !== 'Rating not available' ? `
+                                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                    <div style="display: flex; align-items: center;">
+                                        ${generateStarRating(review.review_rating)}
+                                    </div>
+                                    <span style="font-size: 0.9em; color: #666; font-weight: 500;">
+                                        ${typeof review.review_rating === 'number' ? `${review.review_rating}/5 stars` : review.review_rating}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Show review title if available -->
+                            ${review.review_title ? `
+                                <div style="margin-bottom: 15px; background: #e3f2fd; padding: 12px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                                    <h4 style="margin: 0; color: #1976d2; font-size: 1.1em; font-weight: 600;">${review.review_title}</h4>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Show the sentence containing the keyword -->
+                            <p style="margin: 0 0 15px 0; font-size: 1em; color: #333; line-height: 1.6; font-style: italic; background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <strong>Sentence with "${node.name}":</strong><br>
+                                ${highlightedSentence}
+                            </p>
+                            
+                            <button class="show-full-btn" onclick="toggleReviewDisplay(${actualIndex}, '${keyword}')" 
+                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9em; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); font-weight: 500;">
+                                Show Full Review
+                            </button>
+                        </div>
+                        
+                        <div id="full-review-${displayIndex}" style="display: none; margin: 0 20px 20px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
+                            <!-- Full review content will be loaded here -->
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Add review pagination controls
+            if (totalReviewPages > 1) {
+                content += `
+                    <div id="review-pagination" style="text-align: center; margin: 25px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); color: white;">
+                        <div style="margin-bottom: 15px; font-size: 1em; font-weight: 500; opacity: 0.9;">
+                            Showing ${startIndex + 1}-${endIndex} of ${reviewsContainingKeyword.length} reviews
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 15px; align-items: center;">
+                            <button onclick="changeReviewPage(${totalReviewPages}, -1)" 
+                                    style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                                ← Previous
+                            </button>
+                            <span style="font-size: 1em; font-weight: 600; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+                                Page ${window.currentReviewPage} of ${totalReviewPages}
+                            </span>
+                            <button onclick="changeReviewPage(${totalReviewPages}, 1)" 
+                                    style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (reviewsContainingKeyword.length > 5) {
+                content += `<p style="font-size: 0.8em; color: #999; text-align: center; margin: 10px 0;">Showing all ${reviewsContainingKeyword.length} reviews</p>`;
+            }
+            }
+            content += `</div>`; // Close reviews-section
+            
+            if (reviewsContainingKeyword.length === 0) {
+                content += `<p style="font-size: 0.9em; color: #999; font-style: italic;">No reviews found containing "${node.name}"</p>`;
             }
             
             // Add related images section
             content += `
-                <h4 style="margin: 30px 0 15px 0; color: #333; display: flex; align-items: center;">
-                    <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 8px;">${relatedImages.length}</span>
-                    Related Images
-                </h4>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 20px 0; color: #333; display: flex; align-items: center; font-size: 1.4em; font-weight: 600;">
+                        <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; margin-right: 12px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">${formattedImages.length}</span>
+                        Related Images
+                    </h3>
             `;
             
-            if (relatedImages.length > 0) {
-                content += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px;">`;
+            if (formattedImages.length > 0) {
+                // Store images globally for pagination
+                window.allImages = formattedImages;
+                window.currentImagePage = 1;
+                window.imagesPerPage = 6;
                 
-                relatedImages.slice(0, 6).forEach((imgData, index) => {
+                // Calculate image pagination
+                const totalImagePages = Math.ceil(formattedImages.length / window.imagesPerPage);
+                const imageStartIndex = 0;
+                const imageEndIndex = Math.min(window.imagesPerPage, formattedImages.length);
+                
+                content += `<div id="images-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 15px;">`;
+                
+                formattedImages.slice(imageStartIndex, imageEndIndex).forEach((imgData, index) => {
                     content += `
-                        <div style="text-align: center;">
+                        <div style="text-align: center; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s ease; border: 1px solid #e8e8e8;">
                             <img src="${imgData.url}" alt="Related image" 
-                                 style="width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #eee; cursor: pointer;"
+                                 style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
                                  onclick="openImageModal('${imgData.url}', '${imgData.reviewer}', '${imgData.review_text.replace(/'/g, "\\'")}')"
-                                 onerror="this.style.display='none'">
-                            <p style="font-size: 0.7em; color: #666; margin: 5px 0 0 0;">${imgData.reviewer}</p>
+                                 onerror="this.style.display='none'"
+                                 onmouseover="this.style.transform='scale(1.05)'"
+                                 onmouseout="this.style.transform='scale(1)'">
+                            <p style="font-size: 0.8em; color: #666; margin: 8px 0 0 0; font-weight: 500;">${imgData.reviewer}</p>
                         </div>
                     `;
                 });
                 
                 content += `</div>`;
                 
-                if (relatedImages.length > 6) {
-                    content += `<p style="font-size: 0.8em; color: #999; text-align: center; margin: 10px 0;">... and ${relatedImages.length - 6} more images</p>`;
+                // Add image pagination controls
+                if (totalImagePages > 1) {
+                    content += `
+                        <div id="image-pagination" style="text-align: center; margin: 25px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); color: white;">
+                            <div style="margin-bottom: 15px; font-size: 1em; font-weight: 500; opacity: 0.9;">
+                                Showing ${imageStartIndex + 1}-${imageEndIndex} of ${formattedImages.length} images
+                            </div>
+                            <div style="display: flex; justify-content: center; gap: 15px; align-items: center;">
+                                <button onclick="changeImagePage(${totalImagePages}, -1)" 
+                                        style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                                    ← Previous
+                                </button>
+                                <span style="font-size: 1em; font-weight: 600; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+                                    Page ${window.currentImagePage} of ${totalImagePages}
+                                </span>
+                                <button onclick="changeImagePage(${totalImagePages}, 1)" 
+                                        style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                                    Next →
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else if (formattedImages.length > 6) {
+                    content += `<p style="font-size: 0.9em; color: #666; text-align: center; margin: 15px 0; font-weight: 500;">Showing all ${formattedImages.length} images</p>`;
                 }
             } else {
                 content += `<p style="font-size: 0.9em; color: #999; font-style: italic;">No related images found</p>`;
@@ -1693,8 +2320,114 @@
             
             content += `</div>`;
             
+            console.log('Generated content length:', content.length);
+            console.log('Generated content preview:', content.substring(0, 200) + '...');
+            
             infoPanel.innerHTML = content;
             infoPanel.style.display = 'block';
+            infoPanel.style.visibility = 'visible';
+            infoPanel.style.opacity = '1';
+            
+            // Force a reflow to ensure the content is displayed
+            infoPanel.offsetHeight;
+            
+            console.log('Final info panel innerHTML length:', infoPanel.innerHTML.length);
+            console.log('Final info panel display style:', infoPanel.style.display);
+        }
+        
+        // Function to toggle review display (show/hide full review)
+        function toggleReviewDisplay(index, keyword) {
+            // Find the display index for the current page
+            const currentPage = window.currentReviewPage || 1;
+            const reviewsPerPage = window.reviewsPerPage || 5;
+            const startIndex = (currentPage - 1) * reviewsPerPage;
+            const displayIndex = index - startIndex;
+            
+            console.log('Toggle review display - index:', index, 'displayIndex:', displayIndex, 'currentPage:', currentPage);
+            
+            const fullReviewDiv = document.getElementById(`full-review-${displayIndex}`);
+            const button = document.querySelector(`#review-${displayIndex} .show-full-btn`);
+            
+            if (fullReviewDiv.style.display === 'none') {
+                // Show full review - get data from the filtered reviews array
+                const filteredReviews = window.currentFilteredReviews || [];
+                if (filteredReviews.length === 0) {
+                    console.error('No filtered reviews available');
+                    return;
+                }
+                
+                const currentKeyword = keyword || window.currentKeyword || '';
+                const review = filteredReviews[index];
+                
+                console.log('Toggle review display - review data:', review);
+                console.log('Review text length:', review?.review_text?.length || 0);
+                console.log('Reviewer name:', review?.reviewer_name || review?.reviewer || 'Not found');
+                console.log('Review date:', review?.review_date || review?.date || 'Not found');
+                console.log('Review rating:', review?.rating || review?.star_rating || 'Not found');
+                
+                if (review && review.review_text) {
+                    const highlightedFullReview = highlightKeyword(review.review_text, currentKeyword);
+                    
+                    // Generate star rating HTML
+                    const starRating = review.star_rating || review.rating || null;
+                    const starsHTML = generateStarRating(starRating);
+                    
+                    // Extract numeric rating for display
+                    let numericRating = null;
+                    if (starRating) {
+                        if (typeof starRating === 'string') {
+                            const match = starRating.match(/(\d+(?:\.\d+)?)/);
+                            if (match) {
+                                numericRating = parseFloat(match[1]);
+                            }
+                        } else if (typeof starRating === 'number') {
+                            numericRating = starRating;
+                        }
+                    }
+                    
+                    // Format date
+                    const reviewDate = review.review_date || review.date || 'Unknown date';
+                    const formattedDate = formatDate(reviewDate);
+                    
+                    fullReviewDiv.innerHTML = `
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px 8px 0 0; margin: -10px -10px 15px -10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: bold; font-size: 1.1em;">${review.reviewer_name || review.reviewer || 'Anonymous'}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">${formattedDate}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="display: flex; align-items: center;">
+                                    ${starsHTML}
+                                </div>
+                                ${numericRating && !isNaN(numericRating) && numericRating >= 0 && numericRating <= 5 ? 
+                                    `<span style="font-size: 0.9em; opacity: 0.9;">${numericRating}/5 stars</span>` : 
+                                    `<span style="font-size: 0.9em; opacity: 0.9; font-style: italic;">Rating not available</span>`
+                                }
+                            </div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <p style="margin: 0; font-size: 0.95em; color: #333; line-height: 1.6; white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${highlightedFullReview}</p>
+                        </div>
+                        <button onclick="toggleReviewDisplay(${index})" 
+                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9em; cursor: pointer; margin-top: 15px; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            Show Less
+                        </button>
+                    `;
+                    fullReviewDiv.style.display = 'block';
+                    if (button) button.textContent = 'Show Less';
+                }
+            } else {
+                // Hide full review
+                fullReviewDiv.style.display = 'none';
+                if (button) button.textContent = 'Show Full Review';
+            }
+        }
+        
+        // Function to highlight keyword in text
+        function highlightKeyword(text, keyword) {
+            if (!text || !keyword) return text;
+            const regex = new RegExp(`(${keyword})`, 'gi');
+            return text.replace(regex, '<mark style="background-color: #ffeb3b; padding: 2px 4px; border-radius: 3px; font-weight: bold;">$1</mark>');
         }
         
         // Function to open image modal
@@ -1734,6 +2467,299 @@
             
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
+        }
+        
+        // Function to change review page
+        function changeReviewPage(totalPages, direction) {
+            const newPage = window.currentReviewPage + direction;
+            if (newPage < 1 || newPage > totalPages) return;
+            
+            window.currentReviewPage = newPage;
+            const startIndex = (newPage - 1) * window.reviewsPerPage;
+            const endIndex = Math.min(startIndex + window.reviewsPerPage, window.allReviews.length);
+            
+            console.log('Changing to page:', newPage, 'startIndex:', startIndex, 'endIndex:', endIndex);
+            
+            // Find the reviews container
+            const reviewsContainer = document.querySelector('#info-panel');
+            if (!reviewsContainer) {
+                console.error('Reviews container not found');
+                return;
+            }
+            
+            // Find the reviews section and pagination section to replace
+            const reviewsSection = reviewsContainer.querySelector('.reviews-section');
+            const paginationSection = reviewsContainer.querySelector('#review-pagination');
+            
+            console.log('Found reviews section:', reviewsSection);
+            console.log('Found pagination section:', paginationSection);
+            
+            if (!reviewsSection) {
+                console.error('Reviews section not found');
+                return;
+            }
+            
+            // Generate new reviews content
+            let newReviewsContent = '';
+            window.allReviews.slice(startIndex, endIndex).forEach((review, index) => {
+                const displayIndex = index; // Use display index for this page
+                const globalIndex = startIndex + index;
+                const sentenceWithKeyword = findSentenceWithKeyword(review.review_text, window.currentKeyword);
+                const highlightedSentence = highlightKeyword(sentenceWithKeyword, window.currentKeyword);
+                
+                newReviewsContent += `
+                    <div id="review-${displayIndex}" style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; border: 1px solid #e8e8e8;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-weight: 600; font-size: 1.1em;">${review.reviewer_name || review.reviewer || 'Anonymous'}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">${formatDate(review.review_date || review.date || 'Unknown date')}</div>
+                            </div>
+                        </div>
+                        
+                        <div id="sentence-${displayIndex}" style="padding: 20px;">
+                            <!-- Show rating if available -->
+                            ${review.review_rating && review.review_rating !== 'Rating not available' ? `
+                                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                    <div style="display: flex; align-items: center;">
+                                        ${generateStarRating(review.review_rating)}
+                                    </div>
+                                    <span style="font-size: 0.9em; color: #666; font-weight: 500;">
+                                        ${typeof review.review_rating === 'number' ? `${review.review_rating}/5 stars` : review.review_rating}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Show review title if available -->
+                            ${review.review_title ? `
+                                <div style="margin-bottom: 15px; background: #e3f2fd; padding: 12px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                                    <h4 style="margin: 0; color: #1976d2; font-size: 1.1em; font-weight: 600;">${review.review_title}</h4>
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Show the sentence containing the keyword -->
+                            <p style="margin: 0 0 15px 0; font-size: 1em; color: #333; line-height: 1.6; font-style: italic; background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <strong>Sentence with "${window.currentKeyword}":</strong><br>
+                                ${highlightedSentence}
+                            </p>
+                            
+                            <button class="show-full-btn" onclick="toggleReviewDisplay(${globalIndex}, '${window.currentKeyword}')" 
+                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9em; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); font-weight: 500;">
+                                Show Full Review
+                            </button>
+                        </div>
+                        
+                        <div id="full-review-${displayIndex}" style="display: none; margin: 0 20px 20px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
+                            <!-- Full review content will be loaded here -->
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Update pagination controls
+            const paginationContent = `
+                <div id="review-pagination" style="text-align: center; margin: 25px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); color: white;">
+                    <div style="margin-bottom: 15px; font-size: 1em; font-weight: 500; opacity: 0.9;">
+                        Showing ${startIndex + 1}-${endIndex} of ${window.allReviews.length} reviews
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 15px; align-items: center;">
+                        <button onclick="changeReviewPage(${totalPages}, -1)" 
+                                style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                            ← Previous
+                        </button>
+                        <span style="font-size: 1em; font-weight: 600; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+                            Page ${window.currentReviewPage} of ${totalPages}
+                        </span>
+                        <button onclick="changeReviewPage(${totalPages}, 1)" 
+                                style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 500; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Replace the reviews section content
+            reviewsSection.innerHTML = newReviewsContent;
+            
+            // Find and replace the pagination section
+            const existingPagination = reviewsContainer.querySelector('#review-pagination');
+            if (existingPagination) {
+                existingPagination.outerHTML = paginationContent;
+                console.log('Pagination section replaced');
+            } else {
+                // If pagination section doesn't exist, add it after the reviews section
+                reviewsSection.insertAdjacentHTML('afterend', paginationContent);
+                console.log('Pagination section added');
+            }
+            
+            // Verify pagination section exists after update
+            const updatedPagination = reviewsContainer.querySelector('#review-pagination');
+            if (updatedPagination) {
+                console.log('Pagination section verified after update');
+            } else {
+                console.error('Pagination section still missing after update');
+            }
+            
+            console.log('Page change completed successfully');
+        }
+        
+        // Function to change image page
+        function changeImagePage(totalPages, direction) {
+            const newPage = window.currentImagePage + direction;
+            if (newPage < 1 || newPage > totalPages) return;
+            
+            window.currentImagePage = newPage;
+            const startIndex = (newPage - 1) * window.imagesPerPage;
+            const endIndex = Math.min(startIndex + window.imagesPerPage, window.allImages.length);
+            
+            // Find the images container and replace content
+            const imagesContainer = document.getElementById('images-container');
+            const paginationContainer = document.getElementById('image-pagination');
+            
+            if (!imagesContainer) return;
+            
+            // Generate new images content
+            let newImagesContent = '';
+            window.allImages.slice(startIndex, endIndex).forEach((imgData, index) => {
+                newImagesContent += `
+                    <div style="text-align: center;">
+                        <img src="${imgData.url}" alt="Related image" 
+                             style="width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #eee; cursor: pointer;"
+                             onclick="openImageModal('${imgData.url}', '${imgData.reviewer}', '${imgData.review_text.replace(/'/g, "\\'")}')"
+                             onerror="this.style.display='none'">
+                        <p style="font-size: 0.7em; color: #666; margin: 5px 0 0 0;">${imgData.reviewer}</p>
+                    </div>
+                `;
+            });
+            
+            imagesContainer.innerHTML = newImagesContent;
+            
+            // Update pagination controls
+            if (paginationContainer) {
+                paginationContainer.innerHTML = `
+                    <div style="margin-bottom: 10px; font-size: 0.9em; color: #666;">
+                        Showing ${startIndex + 1}-${endIndex} of ${window.allImages.length} images
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 10px; align-items: center;">
+                        <button onclick="changeImagePage(${totalPages}, -1)" 
+                                style="background: #667eea; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                            Previous
+                        </button>
+                        <span style="font-size: 0.9em; color: #333;">
+                            Page ${window.currentImagePage} of ${totalPages}
+                        </span>
+                        <button onclick="changeImagePage(${totalPages}, 1)" 
+                                style="background: #667eea; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                            Next
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Helper function to find sentence with keyword (needed for pagination)
+        function findSentenceWithKeyword(text, keyword) {
+            if (!text || !keyword) return text;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            for (let sentence of sentences) {
+                if (sentence.toLowerCase().includes(keyword)) {
+                    return sentence.trim() + '.';
+                }
+            }
+            return text.substring(0, 200) + (text.length > 200 ? '...' : '');
+        }
+        
+        // Function to generate star rating HTML
+        function generateStarRating(rating) {
+            // Parse rating from different formats
+            let numericRating = 0;
+            
+            if (rating) {
+                if (typeof rating === 'string') {
+                    // Handle formats like "5 out of 5", "4.5", "3 stars", etc.
+                    const match = rating.match(/(\d+(?:\.\d+)?)/);
+                    if (match) {
+                        numericRating = parseFloat(match[1]);
+                    }
+                } else if (typeof rating === 'number') {
+                    numericRating = rating;
+                }
+            }
+            
+            // Validate rating range
+            if (isNaN(numericRating) || numericRating < 0 || numericRating > 5) {
+                return '<span style="color: #999; font-size: 0.9em; font-style: italic;">No rating available</span>';
+            }
+            
+            const fullStars = Math.floor(numericRating);
+            const hasHalfStar = numericRating % 1 !== 0;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let starsHTML = '';
+            
+            // Full stars
+            for (let i = 0; i < fullStars; i++) {
+                starsHTML += '<span style="color: #ffd700; font-size: 1.2em;">★</span>';
+            }
+            
+            // Half star
+            if (hasHalfStar) {
+                starsHTML += '<span style="color: #ffd700; font-size: 1.2em;">☆</span>';
+            }
+            
+            // Empty stars
+            for (let i = 0; i < emptyStars; i++) {
+                starsHTML += '<span style="color: #ddd; font-size: 1.2em;">☆</span>';
+            }
+            
+            return starsHTML;
+        }
+        
+        // Function to format date
+        function formatDate(dateString) {
+            if (!dateString || dateString === 'Unknown date' || dateString === '') {
+                return 'Date not available';
+            }
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    // Try to parse common date formats
+                    const dateFormats = [
+                        /(\d{1,2})\/(\d{1,2})\/(\d{4})/, // MM/DD/YYYY
+                        /(\d{4})-(\d{1,2})-(\d{1,2})/, // YYYY-MM-DD
+                        /(\d{1,2})-(\d{1,2})-(\d{4})/, // MM-DD-YYYY
+                    ];
+                    
+                    for (let format of dateFormats) {
+                        const match = dateString.match(format);
+                        if (match) {
+                            const [_, month, day, year] = match;
+                            const parsedDate = new Date(year, month - 1, day);
+                            if (!isNaN(parsedDate.getTime())) {
+                                const options = { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric'
+                                };
+                                return parsedDate.toLocaleDateString('en-US', options);
+                            }
+                        }
+                    }
+                    
+                    // If we can't parse it, return a cleaned version
+                    return dateString.replace(/[^\w\s\-]/g, '').trim() || 'Date not available';
+                }
+                
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric'
+                };
+                
+                return date.toLocaleDateString('en-US', options);
+            } catch (error) {
+                return 'Date not available';
+            }
         }
 
         // Mark defective parts
@@ -1784,10 +2810,12 @@
                 background: white;
                 border-radius: 15px;
                 padding: 30px;
-                max-width: 90%;
-                max-height: 90%;
-                overflow-y: auto;
+                width: 95vw;
+                height: 95vh;
+                overflow: hidden;
                 position: relative;
+                display: flex;
+                flex-direction: column;
             `;
             
             // Close button
@@ -1795,23 +2823,131 @@
             closeBtn.innerHTML = '&times;';
             closeBtn.style.cssText = `
                 position: absolute;
-                top: 10px;
-                right: 15px;
+                top: 15px;
+                right: 20px;
                 background: none;
                 border: none;
                 font-size: 24px;
                 cursor: pointer;
                 color: #666;
+                z-index: 1001;
             `;
             closeBtn.onclick = () => document.body.removeChild(modal);
             
             // Title
             const title = document.createElement('h2');
-            title.textContent = 'Defect Analysis Results';
+            title.textContent = 'Defect Visualization';
             title.style.cssText = `
                 margin: 0 0 20px 0;
                 color: #333;
                 text-align: center;
+                font-size: 1.5em;
+            `;
+            
+            // Main container with integrated layout
+            const mainContainer = document.createElement('div');
+            mainContainer.style.cssText = `
+                flex: 1;
+                min-height: 600px;
+                background: #f8f9fa;
+                border-radius: 10px;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+            `;
+            
+            // Left side - Product image
+            const imageContainer = document.createElement('div');
+            imageContainer.style.cssText = `
+                flex: 2;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            `;
+            
+            const defectImageUrl = '{{ defect_image_url }}';
+            const baseImageUrl = '{{ base_image_url }}';
+            
+            let productImage;
+            if (defectImageUrl && defectImageUrl !== '/static/None/defects_overlay.png') {
+                productImage = document.createElement('img');
+                productImage.src = defectImageUrl;
+                productImage.style.cssText = `
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                `;
+            } else if (baseImageUrl && baseImageUrl !== '/static/None/product.jpg') {
+                productImage = document.createElement('img');
+                productImage.src = baseImageUrl;
+                productImage.style.cssText = `
+                    max-width: 100%;
+                    max-height: 100%;
+                    object-fit: contain;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    position: relative;
+                `;
+                
+                // Add defect markers as overlay
+                defectPairs.forEach((pair, index) => {
+                    const marker = document.createElement('div');
+                    marker.style.cssText = `
+                        position: absolute;
+                        top: ${20 + (index * 30)}px;
+                        left: ${20 + (index * 20)}px;
+                        background: #ff4444;
+                        color: white;
+                        border-radius: 50%;
+                        width: 30px;
+                        height: 30px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 12px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                        z-index: 10;
+                    `;
+                    marker.textContent = index + 1;
+                    productImage.appendChild(marker);
+                });
+            } else {
+                // Fallback if no image available
+                productImage = document.createElement('div');
+                productImage.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #f0f0f0;
+                    border-radius: 8px;
+                    color: #666;
+                    font-size: 1.2em;
+                `;
+                productImage.textContent = 'Product image not available';
+            }
+            
+            imageContainer.appendChild(productImage);
+            
+            // Right side - Defect pairs panel
+            const defectPanel = document.createElement('div');
+            defectPanel.style.cssText = `
+                flex: 1;
+                background: white;
+                border-left: 2px solid #eee;
+                padding: 25px;
+                max-height: 100%;
+                overflow-y: auto;
+                display: block;
+                box-shadow: -4px 0 15px rgba(0,0,0,0.1);
             `;
             
             // Summary
@@ -1832,8 +2968,8 @@
             // Defect pairs visualization
             const defectContainer = document.createElement('div');
             defectContainer.style.cssText = `
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                display: flex;
+                flex-direction: column;
                 gap: 15px;
             `;
             
@@ -1846,7 +2982,25 @@
                     border-radius: 12px;
                     text-align: center;
                     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    position: relative;
                 `;
+                
+                const defectNumber = document.createElement('div');
+                defectNumber.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    right: 15px;
+                    background: rgba(255,255,255,0.2);
+                    border-radius: 50%;
+                    width: 25px;
+                    height: 25px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.8em;
+                    font-weight: bold;
+                `;
+                defectNumber.textContent = index + 1;
                 
                 const component = document.createElement('div');
                 component.style.cssText = `
@@ -1870,23 +3024,6 @@
                 `;
                 condition.textContent = pair[1];
                 
-                const defectNumber = document.createElement('div');
-                defectNumber.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 15px;
-                    background: rgba(255,255,255,0.2);
-                    border-radius: 50%;
-                    width: 25px;
-                    height: 25px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 0.8em;
-                    font-weight: bold;
-                `;
-                defectNumber.textContent = index + 1;
-                
                 defectCard.appendChild(defectNumber);
                 defectCard.appendChild(component);
                 defectCard.appendChild(arrow);
@@ -1894,42 +3031,15 @@
                 defectContainer.appendChild(defectCard);
             });
             
-            // Add defect image if available
-            const defectImageUrl = '{{ defect_image_url }}';
-            if (defectImageUrl && defectImageUrl !== '/static/None/defects_overlay.png') {
-                const imageContainer = document.createElement('div');
-                imageContainer.style.cssText = `
-                    margin-top: 20px;
-                    text-align: center;
-                    border-top: 1px solid #eee;
-                    padding-top: 20px;
-                `;
-                
-                const imageTitle = document.createElement('h3');
-                imageTitle.textContent = 'Defect Visualization';
-                imageTitle.style.cssText = `
-                    margin: 0 0 15px 0;
-                    color: #333;
-                `;
-                
-                const defectImage = document.createElement('img');
-                defectImage.src = defectImageUrl;
-                defectImage.style.cssText = `
-                    max-width: 100%;
-                    max-height: 400px;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                `;
-                
-                imageContainer.appendChild(imageTitle);
-                imageContainer.appendChild(defectImage);
-                modalContent.appendChild(imageContainer);
-            }
+            defectPanel.appendChild(summary);
+            defectPanel.appendChild(defectContainer);
+            
+            mainContainer.appendChild(imageContainer);
+            mainContainer.appendChild(defectPanel);
             
             modalContent.appendChild(closeBtn);
             modalContent.appendChild(title);
-            modalContent.appendChild(summary);
-            modalContent.appendChild(defectContainer);
+            modalContent.appendChild(mainContainer);
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
             console.log('Defect modal added to DOM');
@@ -2133,5 +3243,7 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     </script>
+    
+
 </body>
 </html> 

@@ -36,7 +36,8 @@ from nlp_utils import (
     update_packaging_library, filter_packaging_keywords, map_keyword_to_images,
     build_keyword_sentence_map, build_cooccurrence_data, determine_category,
     get_related_words, summarize_text, analyze_recursive_packaging_reviews,
-    get_packaging_related_reviews, get_reviews_by_sentiment, get_packaging_reviews_by_sentiment
+    get_packaging_related_reviews, get_reviews_by_sentiment, get_packaging_reviews_by_sentiment,
+    classify_reviews_as_packaging, get_packaging_classification_summary
 )
 from scraper import (
     amazon_sign_in, ensure_signed_in, get_product_name, download_image,
@@ -147,8 +148,8 @@ def index():
             
             print(f"Recursive analysis completed. Results saved to {analysis_file}")
             
-            # Redirect to the existing analysis page but with enhanced data
-            return redirect(url_for('analysis', product_folder=product_folder))
+            # Redirect to the product overview page first, then user can navigate to analysis
+            return redirect(url_for('product_overview', product_folder=product_folder))
             
         except Exception as e:
             print(f"Error in recursive analysis: {e}")
@@ -167,8 +168,9 @@ def analysis(product_folder):
     recursive_analysis_file = os.path.join(folder, "recursive_analysis.json")
     if os.path.exists(recursive_analysis_file):
         print("Loading enhanced recursive analysis data...")
+        import json as json_module
         with open(recursive_analysis_file, 'r') as f:
-            recursive_data = json.load(f)
+            recursive_data = json_module.load(f)
         
         # Use enhanced data
         all_reviews = recursive_data.get('all_reviews', [])
@@ -189,7 +191,7 @@ def analysis(product_folder):
         # Enhanced packaging terms
         packaging_terms_searched = recursive_data.get('packaging_terms_searched', [])
         
-        # Use all reviews for compatibility with existing template
+        # Use ALL reviews for comprehensive classification
         reviews = all_reviews
         
         # Process review images to ensure they have proper URLs
@@ -249,7 +251,6 @@ def analysis(product_folder):
     
     # Load other data
     base_image_url = url_for('static', filename=f"{product_folder}/product.jpg")
-    defect_image_url = url_for('static', filename=f"{product_folder}/defects_overlay.png")
     excel_url = url_for('static', filename=f"{product_folder}/{product_folder}_reviews_keywords_and_relationships.xlsx")
     lib_url = url_for('static', filename="packaging_library.xlsx")
     
@@ -332,46 +333,106 @@ def analysis(product_folder):
             if count > 0:
                 packaging_freq[kw] = count
     
-    # Build keyword maps
-    unique_keys = set(packaging_keywords_flat)
-    kw_img = map_keyword_to_images(reviews, unique_keys)
-    
-    # Fix image paths to ensure they exist
-    kw_img_trans = {}
-    for kw, imgs in kw_img.items():
-        valid_images = []
-        for img_filename in imgs:
-            if img_filename.strip():
-                # Check if the image file actually exists
-                img_path = os.path.join(folder, "review_images", img_filename.strip())
-                if os.path.exists(img_path):
-                    valid_images.append(
-                        url_for('static', filename=f"{product_folder}/review_images/{img_filename.strip()}")
-                    )
-        if valid_images:
-            kw_img_trans[kw] = valid_images
-    
-    # Build keyword sentence map
-    kw_sent = build_keyword_sentence_map(reviews, unique_keys)
+    # Build keyword maps - will be updated after co-occurrence data is built for enhanced analysis
+    if os.path.exists(recursive_analysis_file):
+        # For enhanced data, we'll build keyword maps after co-occurrence data
+        unique_keys = set(packaging_keywords_flat)  # Temporary, will be updated
+        kw_img = {}
+        kw_img_trans = {}
+        kw_sent = {}
+    else:
+        unique_keys = set(packaging_keywords_flat)
+        print(f"Building keyword maps for {len(unique_keys)} unique keys: {list(unique_keys)[:10]}")
+        
+        kw_img = map_keyword_to_images(reviews, unique_keys)
+        print(f"Raw keyword image map has {len(kw_img)} keywords")
+        if kw_img:
+            print(f"Sample raw keyword image map: {list(kw_img.items())[:3]}")
+        
+        # Fix image paths to ensure they exist
+        kw_img_trans = {}
+        for kw, imgs in kw_img.items():
+            valid_images = []
+            for img_filename in imgs:
+                if img_filename.strip():
+                    # Check if the image file actually exists
+                    img_path = os.path.join(folder, "review_images", img_filename.strip())
+                    if os.path.exists(img_path):
+                        valid_images.append(
+                            url_for('static', filename=f"{product_folder}/review_images/{img_filename.strip()}")
+                        )
+            if valid_images:
+                kw_img_trans[kw] = valid_images
+        
+        print(f"Built keyword image map with {len(kw_img_trans)} keywords")
+        if kw_img_trans:
+            print(f"Sample keyword image map keys: {list(kw_img_trans.keys())[:5]}")
+            for key in list(kw_img_trans.keys())[:3]:
+                print(f"  {key}: {len(kw_img_trans[key])} images")
+        else:
+            print("No keyword image map data found")
+        
+        # Build keyword sentence map
+        kw_sent = build_keyword_sentence_map(reviews, unique_keys)
+        print(f"Built keyword sentence map with {len(kw_sent)} keywords")
+        if kw_sent:
+            print(f"Sample keyword sentence map keys: {list(kw_sent.keys())[:5]}")
+            for key in list(kw_sent.keys())[:3]:
+                print(f"  {key}: {len(kw_sent[key])} sentences")
+        else:
+            print("No keyword sentence map data found")
     
     # Load cooccurrence data
     if os.path.exists(recursive_analysis_file):
-        # For enhanced data, build cooccurrence from packaging terms
-        print("Building co-occurrence data for enhanced analysis...")
+        # For enhanced data, build cooccurrence from actual words found in reviews
+        print("Building co-occurrence data from words found in reviews...")
         cooccurrence_data = {}
         
-        # Build co-occurrence matrix from packaging terms
-        if packaging_keywords_flat:
-            print(f"Building co-occurrence matrix for {len(packaging_keywords_flat)} terms")
-            # Create a simple co-occurrence matrix
-            for i, term1 in enumerate(packaging_keywords_flat):
-                for j, term2 in enumerate(packaging_keywords_flat):
+        # Extract all packaging-related words from reviews
+        from collections import Counter
+        import re
+        
+        # Define packaging-related keywords to look for
+        packaging_keywords_to_find = [
+            'bottle', 'package', 'packaging', 'container', 'box', 'bag', 'can', 'jar', 'tube', 'pouch',
+            'leak', 'leaking', 'leaked', 'broken', 'break', 'broke', 'damage', 'damaged', 'crack', 'cracked',
+            'seal', 'sealed', 'cap', 'lid', 'top', 'cover', 'plastic', 'glass', 'metal', 'paper', 'cardboard',
+            'label', 'labeled', 'wrapped', 'wrap', 'protective', 'protection', 'secure', 'secured',
+            'spill', 'spilled', 'mess', 'dirty', 'clean', 'hygienic', 'safe', 'unsafe', 'dangerous',
+            'tin', 'aluminum', 'steel', 'foil', 'bubble', 'cushion', 'padding', 'tape', 'adhesive',
+            'transparent', 'clear', 'opaque', 'color', 'colored', 'design', 'shape', 'size', 'large', 'small'
+        ]
+        
+        # Find all packaging words that actually appear in reviews
+        found_packaging_words = set()
+        word_frequency = Counter()
+        
+        for review in reviews:
+            review_text = str(review.get("review_text", "")).lower()
+            # Find all packaging keywords in this review
+            for keyword in packaging_keywords_to_find:
+                if keyword in review_text:
+                    found_packaging_words.add(keyword)
+                    word_frequency[keyword] += 1
+        
+        # Only include words that appear at least 2 times
+        frequent_packaging_words = [word for word, count in word_frequency.items() if count >= 2]
+        
+        print(f"Found {len(found_packaging_words)} packaging words in reviews")
+        print(f"Words appearing 2+ times: {frequent_packaging_words}")
+        
+        # Build co-occurrence matrix from actual words found in reviews
+        if frequent_packaging_words:
+            print(f"Building co-occurrence matrix for {len(frequent_packaging_words)} frequently occurring terms")
+            
+            for i, term1 in enumerate(frequent_packaging_words):
+                for j, term2 in enumerate(frequent_packaging_words):
                     if i != j:
                         # Count co-occurrences in reviews
                         cooccurrence_count = 0
                         for review in reviews:
                             review_text = str(review.get("review_text", "")).lower()
-                            if term1.lower() in review_text and term2.lower() in review_text:
+                            if term1 in review_text and term2 in review_text:
                                 cooccurrence_count += 1
                         
                         if cooccurrence_count > 0:
@@ -381,30 +442,41 @@ def analysis(product_folder):
             
             print(f"Built co-occurrence data with {len(cooccurrence_data)} terms")
             if cooccurrence_data:
-                print(f"Sample co-occurrence data: {list(cooccurrence_data.items())[:3]}")
-            else:
-                print("No co-occurrence relationships found")
+                print("Sample co-occurrence relationships:")
+                for term1, connections in list(cooccurrence_data.items())[:3]:
+                    for term2, count in list(connections.items())[:3]:
+                        print(f"  {term1} ↔ {term2}: {count} times")
         else:
-            print("No packaging keywords found for co-occurrence analysis")
-            # Fallback: use all packaging terms from the recursive analysis
-            if 'packaging_terms_searched' in locals():
-                fallback_terms = packaging_terms_searched
-                print(f"Using fallback terms: {fallback_terms}")
-                cooccurrence_data = {}
-                for i, term1 in enumerate(fallback_terms):
-                    for j, term2 in enumerate(fallback_terms):
-                        if i != j:
-                            cooccurrence_count = 0
-                            for review in reviews:
-                                review_text = str(review.get("review_text", "")).lower()
-                                if term1.lower() in review_text and term2.lower() in review_text:
-                                    cooccurrence_count += 1
-                            
-                            if cooccurrence_count > 0:
-                                if term1 not in cooccurrence_data:
-                                    cooccurrence_data[term1] = {}
-                                cooccurrence_data[term1][term2] = cooccurrence_count
-                print(f"Built fallback co-occurrence data with {len(cooccurrence_data)} terms")
+            print("No frequently occurring packaging words found")
+            cooccurrence_data = {}
+        
+        # Update unique_keys to match the words actually found in co-occurrence network
+        if cooccurrence_data:
+            unique_keys = set(cooccurrence_data.keys())
+            print(f"Updated unique_keys to match co-occurrence network: {list(unique_keys)[:10]}")
+            
+            # Rebuild keyword maps with the correct keys
+            kw_img = map_keyword_to_images(reviews, unique_keys)
+            kw_sent = build_keyword_sentence_map(reviews, unique_keys)
+            
+            # Fix image paths to ensure they exist
+            kw_img_trans = {}
+            for kw, imgs in kw_img.items():
+                valid_images = []
+                for img_filename in imgs:
+                    if img_filename.strip():
+                        # Check if the image file actually exists
+                        img_path = os.path.join(folder, "review_images", img_filename.strip())
+                        if os.path.exists(img_path):
+                            valid_images.append(
+                                url_for('static', filename=f"{product_folder}/review_images/{img_filename.strip()}")
+                            )
+                if valid_images:
+                    kw_img_trans[kw] = valid_images
+            
+            print(f"Rebuilt keyword maps with {len(kw_img_trans)} image keywords and {len(kw_sent)} sentence keywords")
+        else:
+            print("No co-occurrence data found, using original unique_keys")
     else:
         try:
             excel_path = os.path.join(folder, f"{product_folder}_reviews_keywords_and_relationships.xlsx")
@@ -471,6 +543,29 @@ def analysis(product_folder):
             if df_co.loc[cond, comp] > 0
         ]
     
+    # Generate defect overlay image if we have defect pairs and a product image
+    defect_image_url = url_for('static', filename=f"{product_folder}/defects_overlay.png")
+    product_image_path = os.path.join(folder, "product.jpg")
+    
+    if defect_pairs and os.path.exists(product_image_path):
+        print(f"Generating defect overlay for {len(defect_pairs)} defect pairs...")
+        try:
+            # Build coordinates map for defect locations
+            coords_map = build_defect_coords_map(product_image_path, defect_pairs)
+            
+            # Generate the defect overlay
+            overlay_path = os.path.join(folder, "defects_overlay.png")
+            generate_defect_overlay(product_image_path, defect_pairs, coords_map, overlay_path)
+            
+            print(f"Defect overlay generated successfully: {overlay_path}")
+        except Exception as e:
+            print(f"Error generating defect overlay: {e}")
+            # Fallback to default defect image URL
+            defect_image_url = url_for('static', filename=f"{product_folder}/defects_overlay.png")
+    else:
+        print("No defect pairs found or product image missing, skipping defect overlay generation")
+        defect_image_url = url_for('static', filename=f"{product_folder}/defects_overlay.png")
+    
     # Enhanced metrics for template
     enhanced_metrics = {
         'total_reviews': total_reviews,
@@ -485,34 +580,174 @@ def analysis(product_folder):
     # Build product description URL - point to our own product overview page
     product_description_url = url_for('product_overview', product_folder=product_folder)
     
-    # Add sentiment analysis to each review and ensure rating is integer
+    # Apply comprehensive packaging classification algorithm to ALL reviews
+    print("Applying comprehensive packaging classification algorithm...")
+    all_reviews = classify_reviews_as_packaging(reviews, components_list, conditions_list)
+    
+    # Get classification summary for all reviews
+    classification_summary = get_packaging_classification_summary(all_reviews)
+    print(f"Classification Summary: {classification_summary}")
+    
+    # Update the reviews variable to use the classified reviews
+    reviews = all_reviews
+    
+    # Add sentiment analysis to each review and ensure rating is an integer
     for review in reviews:
         review['sentiment'] = analyze_sentiment(str(review.get("review_text", "")))
-        # Ensure rating is an integer
+        
+        # Ensure rating is properly processed
         if 'rating' in review and review['rating'] is not None:
             try:
                 if isinstance(review['rating'], str):
-                    # Remove any non-numeric characters and convert to int
-                    rating_str = str(review['rating']).replace('.', '').replace('-', '').replace('+', '')
-                    if rating_str.isdigit():
-                        review['rating'] = int(rating_str)
+                    # Try to extract numeric rating from string
+                    import re
+                    rating_match = re.search(r'(\d+(?:\.\d+)?)', str(review['rating']))
+                    if rating_match:
+                        rating_value = float(rating_match.group(1))
+                        # Ensure rating is between 0 and 5
+                        if 0 <= rating_value <= 5:
+                            review['rating'] = rating_value
+                        else:
+                            review['rating'] = None
                     else:
-                        review['rating'] = 0
+                        review['rating'] = None
+                elif isinstance(review['rating'], (int, float)):
+                    # Ensure rating is between 0 and 5
+                    if 0 <= review['rating'] <= 5:
+                        review['rating'] = float(review['rating'])
+                    else:
+                        review['rating'] = None
                 else:
-                    review['rating'] = int(review['rating'])
+                    review['rating'] = None
             except (ValueError, TypeError):
-                review['rating'] = 0
+                review['rating'] = None
         else:
-            review['rating'] = 0
+            review['rating'] = None
     
-    # Prepare review filtering data for sidebar
+    # Prepare review filtering data for sidebar using classification summary
     review_filters = {
-        'all_reviews': len(reviews),
-        'packaging_reviews': len([r for r in reviews if r.get('is_packaging_related', False)]),
+        'all_reviews': classification_summary['total_reviews'],
+        'packaging_reviews': classification_summary['packaging_reviews'],
         'positive_reviews': len([r for r in reviews if r.get('sentiment') == "positive"]),
         'neutral_reviews': len([r for r in reviews if r.get('sentiment') == "neutral"]),
         'negative_reviews': len([r for r in reviews if r.get('sentiment') == "negative"])
     }
+    
+    # Update enhanced metrics with comprehensive classification results
+    enhanced_metrics['total_reviews'] = classification_summary['total_reviews']
+    enhanced_metrics['packaging_related'] = classification_summary['packaging_reviews']
+    enhanced_metrics['packaging_percentage'] = classification_summary['packaging_percentage']
+    enhanced_metrics['classification_confidence'] = classification_summary['avg_packaging_confidence']
+    enhanced_metrics['high_confidence_packaging'] = classification_summary['high_confidence_packaging']
+    
+    print(f"Comprehensive packaging classification: {classification_summary['packaging_reviews']} packaging-related out of {len(reviews)} total reviews")
+    print(f"Average confidence: {classification_summary['avg_packaging_confidence']:.2f}")
+    print(f"High confidence packaging reviews: {classification_summary['high_confidence_packaging']}")
+    
+    # Debug: Print what's being passed to template
+    print(f"DEBUG: Passing to template - keyword_sentence_map keys: {list(kw_sent.keys()) if kw_sent else 'None'}")
+    print(f"DEBUG: Passing to template - keyword_image_map keys: {list(kw_img_trans.keys()) if kw_img_trans else 'None'}")
+    print(f"DEBUG: Passing to template - cooccurrence_data keys: {list(cooccurrence_data.keys()) if cooccurrence_data else 'None'}")
+    
+    # Clean the data to avoid JSON parsing errors
+    def clean_for_json(obj):
+        if isinstance(obj, dict):
+            return {k: clean_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_for_json(item) for item in obj]
+        elif isinstance(obj, str):
+            # Remove or replace problematic characters that break JSON
+            cleaned = obj
+            # Replace control characters
+            for char in ['\n', '\r', '\t', '\b', '\f']:
+                cleaned = cleaned.replace(char, ' ')
+            # Replace quotes that could break JSON
+            cleaned = cleaned.replace('"', "'").replace('\\', '/')
+            # Remove any other control characters
+            cleaned = ''.join(char for char in cleaned if ord(char) >= 32 or char in ['\t', '\n', '\r'])
+            return cleaned
+        else:
+            return obj
+    
+    # Clean the data to ensure JSON compatibility
+    def clean_text_for_json(text):
+        if not isinstance(text, str):
+            return str(text)
+        # Remove or replace problematic characters
+        cleaned = text
+        # Replace control characters with spaces
+        for char in ['\n', '\r', '\t', '\b', '\f']:
+            cleaned = cleaned.replace(char, ' ')
+        # Replace quotes that could break JSON
+        cleaned = cleaned.replace('"', "'").replace('\\', '/')
+        # Remove any other control characters
+        cleaned = ''.join(char for char in cleaned if ord(char) >= 32 or char in ['\t', '\n', '\r'])
+        # Remove multiple spaces
+        cleaned = ' '.join(cleaned.split())
+        return cleaned
+    
+    def clean_data_for_json(obj):
+        if isinstance(obj, dict):
+            return {k: clean_data_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_data_for_json(item) for item in obj]
+        elif isinstance(obj, str):
+            return clean_text_for_json(obj)
+        else:
+            return obj
+    
+    # Clean the data
+    cleaned_reviews = clean_data_for_json(reviews)
+    cleaned_kw_sent = clean_data_for_json(kw_sent)
+    cleaned_kw_img = clean_data_for_json(kw_img_trans)
+    
+    print(f"DEBUG: Using original data - kw_sent keys: {list(kw_sent.keys()) if kw_sent else 'None'}")
+    
+    # Test JSON serialization
+    try:
+        test_json = json.dumps(kw_sent)
+        print(f"DEBUG: JSON validation passed - length: {len(test_json)}")
+    except Exception as e:
+        print(f"DEBUG: JSON validation failed: {e}")
+        # If JSON fails, create a simplified version
+        simplified_kw_sent = {}
+        for key, value in kw_sent.items():
+            try:
+                # Only keep simple string values
+                if isinstance(value, list):
+                    simplified_values = []
+                    for item in value:
+                        if isinstance(item, dict) and 'sentence' in item:
+                            simplified_values.append(item['sentence'][:200])  # Truncate long sentences
+                        elif isinstance(item, str):
+                            simplified_values.append(item[:200])
+                    simplified_kw_sent[key] = simplified_values
+            except:
+                continue
+        cleaned_kw_sent = simplified_kw_sent
+        print(f"DEBUG: Using simplified data - keys: {list(simplified_kw_sent.keys())}")
+    
+    # Calculate keyword frequencies for word cloud
+    keyword_frequencies = {}
+    if reviews:
+        from collections import Counter
+        import re
+        
+        # Combine all review text
+        all_text = ' '.join([str(review.get('review_text', '')) for review in reviews])
+        
+        # Extract packaging-related keywords and count their occurrences
+        packaging_terms = components_list + conditions_list
+        
+        for term in packaging_terms:
+            # Use case-insensitive regex to find all occurrences
+            pattern = r'\b' + re.escape(term.lower()) + r'\b'
+            count = len(re.findall(pattern, all_text.lower()))
+            if count > 0:
+                keyword_frequencies[term] = count
+        
+        # Sort by frequency (highest first)
+        keyword_frequencies = dict(sorted(keyword_frequencies.items(), key=lambda x: x[1], reverse=True))
     
     return render_template(
         "results_enhanced.html",
@@ -520,13 +755,13 @@ def analysis(product_folder):
         packaging_keywords=packaging_keywords_flat,
         packaging_dropdown_data=dropdown_data_flat,
         image_files=image_files,
-        reviews=reviews,
+        reviews=cleaned_reviews,
         excel_file=excel_url,
         cooccurrence_data=cooccurrence_data,
-        keyword_image_map=kw_img_trans,
+        keyword_image_map=cleaned_kw_img,
         product_folder=product_folder,
         packaging_library_url=lib_url,
-        keyword_sentence_map=kw_sent,
+        keyword_sentence_map=cleaned_kw_sent,
         defect_image_url=defect_image_url,
         defect_pairs=defect_pairs,
         total_reviews=total_reviews,
@@ -538,6 +773,7 @@ def analysis(product_folder):
         enhanced_metrics=enhanced_metrics,  # Pass enhanced metrics to template
         product_description_url=product_description_url,  # Product description URL
         review_filters=review_filters,  # Review filtering data for sidebar
+        keyword_frequencies=keyword_frequencies,  # Keyword frequencies for word cloud
     )
 
 @app.route("/product_overview/<product_folder>")
@@ -897,6 +1133,89 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(scheduled_scrape, 'cron', hour=10, minute=0)
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
+
+@app.route('/neo4j_cooccurrence/<product_folder>')
+def neo4j_cooccurrence(product_folder):
+    """Get Neo4j-based co-occurrence data for a product"""
+    try:
+        from neo4j_utils import get_neo4j_network_data
+        
+        # Try to get data from Neo4j
+        network_data = get_neo4j_network_data()
+        
+        if network_data:
+            return jsonify(network_data)
+        else:
+            # Fallback to regular co-occurrence data
+            folder = os.path.join("static", product_folder)
+            recursive_analysis_file = os.path.join(folder, "recursive_analysis.json")
+            
+            if os.path.exists(recursive_analysis_file):
+                with open(recursive_analysis_file, 'r') as f:
+                    recursive_data = json.load(f)
+                
+                packaging_reviews_data = recursive_data.get('packaging_reviews', {})
+                if isinstance(packaging_reviews_data, dict):
+                    reviews = packaging_reviews_data.get('reviews', [])
+                else:
+                    reviews = []
+                    
+                packaging_keywords_flat = recursive_data.get('packaging_terms_searched', [])
+                
+                # Build co-occurrence data
+                cooccurrence_data = {}
+                for i, term1 in enumerate(packaging_keywords_flat):
+                    for j, term2 in enumerate(packaging_keywords_flat):
+                        if i != j:
+                            cooccurrence_count = 0
+                            for review in reviews:
+                                review_text = str(review.get("review_text", "")).lower()
+                                if term1.lower() in review_text and term2.lower() in review_text:
+                                    cooccurrence_count += 1
+                            
+                            if cooccurrence_count > 0:
+                                if term1 not in cooccurrence_data:
+                                    cooccurrence_data[term1] = {}
+                                cooccurrence_data[term1][term2] = cooccurrence_count
+                
+                # Convert to network format
+                nodes = [{'id': term, 'name': term} for term in cooccurrence_data.keys()]
+                relationships = []
+                for term1, connections in cooccurrence_data.items():
+                    for term2, weight in connections.items():
+                        relationships.append({
+                            'source': term1,
+                            'target': term2,
+                            'weight': weight
+                        })
+                
+                return jsonify({
+                    'nodes': nodes,
+                    'relationships': relationships
+                })
+            else:
+                return jsonify({'error': 'No data found'})
+                
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/neo4j_term_details/<term_name>')
+def neo4j_term_details(term_name):
+    """Get detailed information about a term from Neo4j"""
+    try:
+        from neo4j_utils import Neo4jCooccurrenceGraph
+        
+        graph = Neo4jCooccurrenceGraph()
+        details = graph.get_term_details(term_name)
+        graph.close()
+        
+        if details:
+            return jsonify(details)
+        else:
+            return jsonify({'error': 'Term not found'})
+            
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == "__main__":
     app.run(debug=True, port=5010, use_reloader=False) 
