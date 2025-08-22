@@ -149,7 +149,7 @@ def index():
             print(f"Recursive analysis completed. Results saved to {analysis_file}")
             
             # Redirect to the product overview page first, then user can navigate to analysis
-            return redirect(url_for('product_overview', product_folder=product_folder))
+            return redirect(f"/product_overview/{product_folder}")
             
         except Exception as e:
             print(f"Error in recursive analysis: {e}")
@@ -578,7 +578,7 @@ def analysis(product_folder):
     }
     
     # Build product description URL - point to our own product overview page
-    product_description_url = url_for('product_overview', product_folder=product_folder)
+    product_description_url = f"/product_overview/{product_folder}"
     
     # Apply comprehensive packaging classification algorithm to ALL reviews
     print("Applying comprehensive packaging classification algorithm...")
@@ -869,7 +869,7 @@ def product_overview(product_folder):
         neutral_count=neutral_count,
         product_image_url=product_image_url,
         sample_reviews=sample_reviews,
-        analysis_url=url_for('analysis', product_folder=product_folder)
+        analysis_url=f"/analysis/{product_folder}"
     )
 
 @app.route("/enhanced_analyze", methods=["GET", "POST"])
@@ -918,7 +918,7 @@ def enhanced_analyze():
             print(f"Enhanced analysis completed. Results saved to {analysis_file}")
             
             # Redirect to enhanced results page
-            return redirect(url_for('enhanced_results', product_folder=product_folder))
+            return redirect(f"/enhanced_results/{product_folder}")
             
         except Exception as e:
             print(f"Error in enhanced analysis: {e}")

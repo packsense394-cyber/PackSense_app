@@ -449,11 +449,22 @@
         .word-tooltip::after {
             content: '';
             position: absolute;
-            top: 100%;
             left: 50%;
             transform: translateX(-50%);
             border: 8px solid transparent;
+        }
+        
+        /* Default arrow pointing down (above word) */
+        .word-tooltip::after {
+            top: 100%;
             border-top-color: #1a1a2e;
+        }
+        
+        /* Arrow pointing up (below word) */
+        .word-tooltip.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: #1a1a2e;
+            border-top-color: transparent;
         }
 
         /* Frequency-based color classes - Bright & Vibrant for Blue Background */
@@ -1592,12 +1603,37 @@
                         </div>
                     `;
                     
-                    // Position tooltip above the word
+                    // Position tooltip with smart positioning to avoid going out of bounds
                     const rect = wordElement.getBoundingClientRect();
                     const containerRect = wordCloudContainer.getBoundingClientRect();
+                    const tooltipRect = tooltip.getBoundingClientRect();
                     
-                    tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
-                    tooltip.style.top = (rect.top - containerRect.top - 45) + 'px';
+                    // Calculate positions
+                    const wordCenterX = rect.left - containerRect.left + rect.width / 2;
+                    const wordTop = rect.top - containerRect.top;
+                    const wordBottom = wordTop + rect.height;
+                    
+                    // Check if tooltip would go out of bounds when positioned above
+                    const tooltipHeight = 80; // Approximate tooltip height
+                    const wouldGoAboveBounds = (wordTop - tooltipHeight - 10) < 0;
+                    
+                    // Position horizontally centered on the word
+                    tooltip.style.left = wordCenterX + 'px';
+                    
+                    if (wouldGoAboveBounds) {
+                        // Position below the word if it would go out of bounds above
+                        tooltip.style.top = (wordBottom + 10) + 'px';
+                        tooltip.style.transform = 'translateX(-50%) scale(1)';
+                        // Update arrow to point up
+                        tooltip.classList.add('arrow-up');
+                    } else {
+                        // Position above the word (default)
+                        tooltip.style.top = (wordTop - tooltipHeight - 10) + 'px';
+                        tooltip.style.transform = 'translateX(-50%) scale(1)';
+                        // Update arrow to point down
+                        tooltip.classList.remove('arrow-up');
+                    }
+                    
                     tooltip.classList.add('show');
                 });
                 

@@ -259,7 +259,7 @@ def index():
             print(f"Cross-platform analysis completed. Results saved to {analysis_file}")
             
             # Redirect to the product overview page
-            return redirect(url_for('product_overview', product_folder=product_folder))
+            return redirect(f"/product_overview/{product_folder}")
             
         except Exception as e:
             print(f"Error in cross-platform analysis: {e}")
@@ -573,7 +573,7 @@ def product_overview(product_folder):
         neutral_count=neutral_count,
         product_image_url=product_image_url,
         sample_reviews=sample_reviews,
-        analysis_url=url_for('analysis', product_folder=product_folder)
+        analysis_url=f"/analysis/{product_folder}"
     )
 
 @app.route("/download_images/<product_folder>")
