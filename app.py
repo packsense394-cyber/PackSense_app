@@ -1251,4 +1251,18 @@ def neo4j_term_details(term_name):
         return jsonify({'error': str(e)})
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5010, use_reloader=False) 
+    import sys
+    port = 5010
+    if len(sys.argv) > 1 and sys.argv[1].startswith('--port'):
+        try:
+            port = int(sys.argv[1].split('=')[1])
+        except (IndexError, ValueError):
+            print("Invalid port format. Using default port 5010")
+    elif len(sys.argv) > 1:
+        try:
+            port = int(sys.argv[1])
+        except ValueError:
+            print("Invalid port number. Using default port 5010")
+    
+    print(f"Starting PackSense server on port {port}")
+    app.run(debug=True, port=port, use_reloader=False) 
