@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PackSense - Detailed Analysis</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
@@ -17,9 +18,9 @@
         
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #404040 75%, #555555 100%);
             min-height: 100vh;
-            color: #333;
+            color: #ffffff;
             overflow-x: hidden;
         }
         
@@ -32,9 +33,9 @@
             width: 100%;
             height: 100%;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
             z-index: -1;
             animation: float 20s ease-in-out infinite;
         }
@@ -51,9 +52,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 20px 40px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
             position: fixed;
             top: 0;
@@ -70,10 +71,7 @@
         }
         
         .logo-icon {
-            background: linear-gradient(45deg, #fff, #e8f1fa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ffffff;
             margin-right: 10px;
         }
         
@@ -106,9 +104,9 @@
         /* Sidebar */
         .sidebar {
             width: 350px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
             padding: 30px;
             overflow-y: auto;
             position: fixed;
@@ -130,13 +128,13 @@
         .sidebar-section {
             margin-bottom: 30px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .sidebar-section h3 {
-            color: #1e3c72;
+            color: #ffffff;
             font-size: 1.2em;
             margin-bottom: 15px;
             font-weight: 600;
@@ -151,7 +149,7 @@
             width: 100%;
             padding: 12px 15px;
             margin-bottom: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #333333 0%, #555555 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -163,12 +161,12 @@
         
         .review-filter:hover {
             transform: translateX(5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
         
         .review-filter.active {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+            background: linear-gradient(135deg, #666666 0%, #888888 100%);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
         }
         
         .filter-count {
@@ -187,7 +185,7 @@
         .filter-control label {
             display: block;
             font-weight: 600;
-            color: #1e3c72;
+            color: #ffffff;
             margin-bottom: 8px;
             font-size: 0.9em;
         }
@@ -196,10 +194,11 @@
         .filter-control input {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             font-size: 0.9em;
-            background: white;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
         
         /* Action buttons */
@@ -282,83 +281,300 @@
             letter-spacing: 0.5px;
         }
         
-        /* Word Cloud Styles */
+        /* Word Cloud Styles - Futuristic Design with Multi-Color Palette */
         .word-cloud-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: radial-gradient(ellipse at center, 
+                #0a0a0a 0%, 
+                #1a1a1a 25%, 
+                #2d2d2d 50%, 
+                #404040 75%, 
+                #555555 100%);
             color: white;
-            padding: 25px;
-            border-radius: 15px;
+            padding: 30px;
+            border-radius: 20px;
             margin-bottom: 30px;
             text-align: center;
-            min-height: 300px;
+            min-height: 400px;
             position: relative;
-        }
-        
-        .word-cloud-container h3 {
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-        
-        .word-cloud {
-            width: 100%;
-            height: 250px; /* Original height */
-            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             overflow: hidden;
         }
-        
+
+        .word-cloud-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(100, 200, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(50, 150, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%);
+            animation: shimmer 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .word-cloud-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 60% 60%, rgba(50, 205, 50, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 30% 70%, rgba(255, 99, 71, 0.05) 0%, transparent 40%);
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%) rotate(0deg); }
+            50% { transform: translateX(100%) rotate(180deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            33% { transform: translateY(-10px) scale(1.05); }
+            66% { transform: translateY(10px) scale(0.95); }
+        }
+
+        .word-cloud-container h3 {
+            margin-bottom: 10px;
+            font-size: 1.5em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+            font-family: 'Orbitron', 'Rajdhani', monospace;
+            position: relative;
+            z-index: 2;
+        }
+
+        .word-cloud-container h3 i {
+            margin-right: 10px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .word-cloud-container p {
+            color: #e8f4fd;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 400;
+            position: relative;
+            z-index: 2;
+        }
+
+        .word-cloud {
+            width: 100%;
+            height: 320px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            background: rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
         .word-cloud-word {
             position: absolute;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             font-weight: 600;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            text-shadow: 0 0 10px currentColor;
             user-select: none;
+            font-family: 'Orbitron', 'Rajdhani', monospace;
+            border-radius: 8px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+            min-width: fit-content;
+            text-align: center;
+            box-sizing: border-box;
         }
-        
+
         .word-cloud-word:hover {
-            transform: scale(1.2);
-            z-index: 10;
+            transform: scale(1.3) rotate(2deg);
+            z-index: 100;
+            box-shadow: 0 0 30px currentColor, 0 0 60px rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15) !important;
+            border-color: currentColor !important;
+            animation: wordPulse 0.6s ease-in-out;
         }
-        
+
+        @keyframes wordPulse {
+            0% { transform: scale(1.3) rotate(2deg); }
+            50% { transform: scale(1.4) rotate(3deg); }
+            100% { transform: scale(1.3) rotate(2deg); }
+        }
+
         .word-tooltip {
             position: absolute;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 13px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
             font-weight: 600;
             pointer-events: none;
             z-index: 1000;
             white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.3s ease;
-            transform: translateX(-50%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateX(-50%) scale(0.8);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            font-family: 'Rajdhani', sans-serif;
+            backdrop-filter: blur(10px);
         }
-        
+
         .word-tooltip.show {
             opacity: 1;
+            transform: translateX(-50%) scale(1);
         }
-        
+
         .word-tooltip::after {
             content: '';
             position: absolute;
             top: 100%;
             left: 50%;
             transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: rgba(0, 0, 0, 0.9);
+            border: 8px solid transparent;
+            border-top-color: #1a1a2e;
+        }
+
+        /* Frequency-based color classes - Bright & Vibrant for Blue Background */
+        
+        /* LOW FREQUENCY - Bright Cool Colors */
+        .word-freq-low-cyan {
+            color: #00ffff !important;
+            text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff !important;
+            background: rgba(0, 255, 255, 0.2) !important;
+            border-color: rgba(0, 255, 255, 0.5) !important;
+        }
+
+        .word-freq-low-blue {
+            color: #87ceeb !important;
+            text-shadow: 0 0 20px #87ceeb, 0 0 30px #87ceeb !important;
+            background: rgba(135, 206, 235, 0.2) !important;
+            border-color: rgba(135, 206, 235, 0.5) !important;
+        }
+
+        .word-freq-low-purple {
+            color: #da70d6 !important;
+            text-shadow: 0 0 20px #da70d6, 0 0 30px #da70d6 !important;
+            background: rgba(218, 112, 214, 0.2) !important;
+            border-color: rgba(218, 112, 214, 0.5) !important;
+        }
+
+        /* MEDIUM FREQUENCY - Bright Green/Teal Spectrum */
+        .word-freq-medium-green {
+            color: #00ff00 !important;
+            text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00 !important;
+            background: rgba(0, 255, 0, 0.2) !important;
+            border-color: rgba(0, 255, 0, 0.5) !important;
+        }
+
+        .word-freq-medium-blue {
+            color: #00bfff !important;
+            text-shadow: 0 0 20px #00bfff, 0 0 30px #00bfff !important;
+            background: rgba(0, 191, 255, 0.2) !important;
+            border-color: rgba(0, 191, 255, 0.5) !important;
+        }
+
+        .word-freq-medium-teal {
+            color: #40e0d0 !important;
+            text-shadow: 0 0 20px #40e0d0, 0 0 30px #40e0d0 !important;
+            background: rgba(64, 224, 208, 0.2) !important;
+            border-color: rgba(64, 224, 208, 0.5) !important;
+        }
+
+        /* HIGH FREQUENCY - Bright Orange/Yellow Spectrum */
+        .word-freq-high-orange {
+            color: #ff8c00 !important;
+            text-shadow: 0 0 25px #ff8c00, 0 0 35px #ff8c00 !important;
+            background: rgba(255, 140, 0, 0.2) !important;
+            border-color: rgba(255, 140, 0, 0.5) !important;
+        }
+
+        .word-freq-high-yellow {
+            color: #ffff00 !important;
+            text-shadow: 0 0 25px #ffff00, 0 0 35px #ffff00 !important;
+            background: rgba(255, 255, 0, 0.2) !important;
+            border-color: rgba(255, 255, 0, 0.5) !important;
+        }
+
+        .word-freq-high-amber {
+            color: #ffcc00 !important;
+            text-shadow: 0 0 25px #ffcc00, 0 0 35px #ffcc00 !important;
+            background: rgba(255, 204, 0, 0.2) !important;
+            border-color: rgba(255, 204, 0, 0.5) !important;
+        }
+
+        /* VERY HIGH FREQUENCY - Bright Warm Colors */
+        .word-freq-very-high-red {
+            color: #ff4444 !important;
+            text-shadow: 0 0 30px #ff4444, 0 0 40px #ff4444 !important;
+            background: rgba(255, 68, 68, 0.2) !important;
+            border-color: rgba(255, 68, 68, 0.5) !important;
+        }
+
+        .word-freq-very-high-orange {
+            color: #ff6600 !important;
+            text-shadow: 0 0 30px #ff6600, 0 0 40px #ff6600 !important;
+            background: rgba(255, 102, 0, 0.2) !important;
+            border-color: rgba(255, 102, 0, 0.5) !important;
+        }
+
+        .word-freq-very-high-coral {
+            color: #ff6b6b !important;
+            text-shadow: 0 0 30px #ff6b6b, 0 0 40px #ff6b6b !important;
+            background: rgba(255, 107, 107, 0.2) !important;
+            border-color: rgba(255, 107, 107, 0.5) !important;
+        }
+
+        /* EXTREME FREQUENCY - Brightest Hot Colors */
+        .word-freq-extreme-pink {
+            color: #ff00ff !important;
+            text-shadow: 0 0 35px #ff00ff, 0 0 45px #ff00ff !important;
+            background: rgba(255, 0, 255, 0.2) !important;
+            border-color: rgba(255, 0, 255, 0.5) !important;
+        }
+
+        .word-freq-extreme-red {
+            color: #ff0000 !important;
+            text-shadow: 0 0 35px #ff0000, 0 0 45px #ff0000 !important;
+            background: rgba(255, 0, 0, 0.2) !important;
+            border-color: rgba(255, 0, 0, 0.5) !important;
+        }
+
+        .word-freq-extreme-purple {
+            color: #cc00cc !important;
+            text-shadow: 0 0 35px #cc00cc, 0 0 45px #cc00cc !important;
+            background: rgba(204, 0, 204, 0.2) !important;
+            border-color: rgba(204, 0, 204, 0.5) !important;
         }
         
         /* Reviews section */
         .reviews-section {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(20px);
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
         
         .reviews-header {
@@ -367,28 +583,28 @@
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
         }
         
         .reviews-title {
             font-size: 1.5em;
             font-weight: 600;
-            color: #1e3c72;
+            color: #ffffff;
         }
         
         .reviews-count {
-            color: #666;
+            color: rgba(255, 255, 255, 0.7);
             font-size: 0.9em;
         }
         
         /* Review cards */
         .review-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            border-left: 4px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-left: 4px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
         }
         
@@ -413,13 +629,13 @@
         
         .reviewer-name {
             font-weight: 600;
-            color: #1e3c72;
+            color: #ffffff;
             font-size: 1.1em;
             margin-bottom: 5px;
         }
         
         .review-title {
-            color: #666;
+            color: rgba(255, 255, 255, 0.7);
             font-size: 0.9em;
             font-style: italic;
             margin-bottom: 5px;
@@ -442,7 +658,7 @@
         
         .review-text {
             line-height: 1.6;
-            color: #333;
+            color: #ffffff;
             margin-bottom: 15px;
         }
         
@@ -732,7 +948,7 @@
     <!-- Header -->
     <div class="header">
         <div class="logo">
-            <div class="logo-icon">⬡</div>
+            <i class="fas fa-box logo-icon"></i>
             PackSense
         </div>
         <div class="nav-links">
@@ -879,7 +1095,7 @@
             <!-- Packaging Keyword Frequencies Word Cloud -->
             {% if enhanced_metrics.has_enhanced_data %}
             <div class="word-cloud-container">
-                <h3><i class="fas fa-cloud"></i> Packaging Keyword Frequencies</h3>
+                <h3><i class="fas fa-cloud"></i> PACKAGING KEYWORD FREQUENCIES</h3>
                 <p>Hover over words to see their frequency in packaging-related reviews</p>
                 <div class="word-cloud" id="word-cloud">
                     <!-- Word cloud will be generated here -->
@@ -1086,7 +1302,7 @@
             });
         });
         
-        // Word Cloud Generation - Efficient Space Usage with No Overlap
+        // Word Cloud Generation - Futuristic Design with Dynamic Sizing
         function generateWordCloud() {
             const wordCloudContainer = document.getElementById('word-cloud');
             const tooltip = document.getElementById('word-tooltip');
@@ -1097,14 +1313,14 @@
             const keywordData = JSON.parse('{{ keyword_frequencies|tojson|safe }}');
             
             if (!keywordData || Object.keys(keywordData).length === 0) {
-                wordCloudContainer.innerHTML = '<p style="color: white; margin-top: 50px;">No keyword data available</p>';
+                wordCloudContainer.innerHTML = '<p style="color: white; margin-top: 50px; font-family: \'Rajdhani\', sans-serif;">No keyword data available</p>';
                 return;
             }
             
             // Clear existing content
             wordCloudContainer.innerHTML = '';
             
-            // Convert to array and sort by frequency - SHOW ALL WORDS
+            // Convert to array and sort by frequency
             const words = Object.entries(keywordData)
                 .map(([word, count]) => ({ word, count }))
                 .sort((a, b) => b.count - a.count);
@@ -1112,8 +1328,9 @@
             const containerWidth = wordCloudContainer.offsetWidth;
             const containerHeight = wordCloudContainer.offsetHeight;
             
-            // Color palette for different frequency ranges
-            const colors = ['#FFD700', '#FFA500', '#FF6347', '#FF4500', '#FF0000'];
+            // Find min and max frequencies for scaling
+            const maxFreq = Math.max(...words.map(w => w.count));
+            const minFreq = Math.min(...words.map(w => w.count));
             
             // Store placed words for collision detection
             const placedWords = [];
@@ -1123,177 +1340,264 @@
                 wordElement.className = 'word-cloud-word';
                 wordElement.textContent = item.word;
                 
-                // Use same font size for all words
-                const fontSize = 20;
+                // Dynamic font size based on frequency (16px to 48px)
+                const fontSize = 16 + (item.count / maxFreq) * 32;
                 wordElement.style.fontSize = fontSize + 'px';
                 
-                // Assign color based on frequency
-                const colorIndex = Math.min(Math.floor(item.count / 10), colors.length - 1);
-                wordElement.style.color = colors[colorIndex];
+                // Assign frequency-based color class with more variety
+                const freqRatio = item.count / maxFreq;
+                const wordIndex = index; // Use word index for additional color variation
                 
-                // Calculate word dimensions with efficient padding
-                const wordWidth = item.word.length * fontSize * 0.6 + 35;
-                const wordHeight = fontSize * 1.2 + 35;
+                if (freqRatio >= 0.8) {
+                    // Extreme frequency - multiple hot colors
+                    const extremeColors = ['word-freq-extreme-pink', 'word-freq-extreme-red', 'word-freq-extreme-purple'];
+                    wordElement.classList.add(extremeColors[wordIndex % extremeColors.length]);
+                } else if (freqRatio >= 0.6) {
+                    // Very high frequency - warm colors
+                    const veryHighColors = ['word-freq-very-high-red', 'word-freq-very-high-orange', 'word-freq-very-high-coral'];
+                    wordElement.classList.add(veryHighColors[wordIndex % veryHighColors.length]);
+                } else if (freqRatio >= 0.4) {
+                    // High frequency - orange/yellow spectrum
+                    const highColors = ['word-freq-high-orange', 'word-freq-high-yellow', 'word-freq-high-amber'];
+                    wordElement.classList.add(highColors[wordIndex % highColors.length]);
+                } else if (freqRatio >= 0.2) {
+                    // Medium frequency - green/blue spectrum
+                    const mediumColors = ['word-freq-medium-green', 'word-freq-medium-blue', 'word-freq-medium-teal'];
+                    wordElement.classList.add(mediumColors[wordIndex % mediumColors.length]);
+                } else {
+                    // Low frequency - cool colors
+                    const lowColors = ['word-freq-low-cyan', 'word-freq-low-blue', 'word-freq-low-purple'];
+                    wordElement.classList.add(lowColors[wordIndex % lowColors.length]);
+                }
                 
-                // Try to find a non-overlapping position with efficient spacing
+                // Calculate word dimensions with enhanced padding
+                const basePadding = fontSize * 0.3;
+                const wordWidth = item.word.length * fontSize * 0.65 + basePadding * 2;
+                const wordHeight = fontSize * 1.2 + basePadding * 2;
+                
+                // Enhanced collision detection with precise bounding box calculations
+                function checkCollision(x, y, width, height) {
+                    const padding = Math.max(fontSize * 0.4, 15); // Minimum 15px padding
+                    
+                    for (const placed of placedWords) {
+                        // Bounding box collision detection with padding
+                        const box1 = {
+                            left: x - padding,
+                            right: x + width + padding,
+                            top: y - padding,
+                            bottom: y + height + padding
+                        };
+                        
+                        const box2 = {
+                            left: placed.x - padding,
+                            right: placed.x + placed.width + padding,
+                            top: placed.y - padding,
+                            bottom: placed.y + placed.height + padding
+                        };
+                        
+                        // Check if boxes overlap
+                        if (box1.left < box2.right && box1.right > box2.left &&
+                            box1.top < box2.bottom && box1.bottom > box2.top) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                
+                // Try to find a non-overlapping position with enhanced spiral layout
                 let position = null;
                 let attempts = 0;
                 
-                // Strategy 1: Efficient spiral placement from center
-                while (attempts < 200 && !position) {
+                // Strategy 1: Enhanced spiral placement with collision-aware spacing
+                while (attempts < 500 && !position) {
                     const centerX = containerWidth / 2;
                     const centerY = containerHeight / 2;
-                    const radius = 20 + (attempts * 1.5);
-                    const angle = attempts * 0.4;
                     
-                    const x = centerX + radius * Math.cos(angle);
-                    const y = centerY + radius * Math.sin(angle);
+                    // More controlled spiral with better spacing
+                    const radiusStep = Math.max(fontSize * 0.8, 25);
+                    const angleStep = 0.2; // Smaller angle steps for denser packing
+                    const radius = radiusStep * Math.sqrt(attempts);
+                    const angle = attempts * angleStep;
                     
+                    const x = centerX + radius * Math.cos(angle) - wordWidth / 2;
+                    const y = centerY + radius * Math.sin(angle) - wordHeight / 2;
+                    
+                    // Check bounds
                     if (x >= 0 && x <= containerWidth - wordWidth && 
                         y >= 0 && y <= containerHeight - wordHeight) {
                         
-                        let hasCollision = false;
-                        for (const placed of placedWords) {
-                            const distance = Math.sqrt(
-                                Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
-                            );
-                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
-                            
-                            if (distance < minDistance) {
-                                hasCollision = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!hasCollision) {
+                        if (!checkCollision(x, y, wordWidth, wordHeight)) {
                             position = { x, y };
                         }
                     }
                     attempts++;
                 }
                 
-                // Strategy 2: Efficient random placement
+                // Strategy 2: Grid-based placement with jittering
                 if (!position) {
-                    for (let i = 0; i < 150; i++) {
-                        const x = Math.random() * (containerWidth - wordWidth);
-                        const y = Math.random() * (containerHeight - wordHeight);
-                        
-                        let hasCollision = false;
-                        for (const placed of placedWords) {
-                            const distance = Math.sqrt(
-                                Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
-                            );
-                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
-                            
-                            if (distance < minDistance) {
-                                hasCollision = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!hasCollision) {
-                            position = { x, y };
-                            break;
-                        }
-                    }
-                }
-                
-                // Strategy 3: Efficient grid-based placement
-                if (!position) {
-                    const gridSize = Math.max(wordWidth, wordHeight) + 30;
+                    const gridSize = Math.max(fontSize, 30);
                     const cols = Math.floor(containerWidth / gridSize);
                     const rows = Math.floor(containerHeight / gridSize);
                     
-                    for (let row = 0; row < rows; row++) {
-                        for (let col = 0; col < cols; col++) {
-                            const x = col * gridSize + (gridSize - wordWidth) / 2;
-                            const y = row * gridSize + (gridSize - wordHeight) / 2;
+                    for (let row = 0; row < rows && !position; row++) {
+                        for (let col = 0; col < cols && !position; col++) {
+                            // Base grid position
+                            let x = col * gridSize + (gridSize - wordWidth) / 2;
+                            let y = row * gridSize + (gridSize - wordHeight) / 2;
                             
-                            let hasCollision = false;
-                            for (const placed of placedWords) {
-                                const distance = Math.sqrt(
-                                    Math.pow(x - placed.x, 2) + Math.pow(y - placed.y, 2)
-                                );
-                                const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 30;
-                                
-                                if (distance < minDistance) {
-                                    hasCollision = true;
-                                    break;
-                                }
-                            }
+                            // Add jittering for more organic look
+                            const jitter = gridSize * 0.3;
+                            x += (Math.random() - 0.5) * jitter;
+                            y += (Math.random() - 0.5) * jitter;
                             
-                            if (!hasCollision) {
+                            // Ensure bounds
+                            x = Math.max(0, Math.min(x, containerWidth - wordWidth));
+                            y = Math.max(0, Math.min(y, containerHeight - wordHeight));
+                            
+                            if (!checkCollision(x, y, wordWidth, wordHeight)) {
                                 position = { x, y };
-                                break;
                             }
                         }
-                        if (position) break;
                     }
                 }
                 
-                // Strategy 4: Edge placement
+                // Strategy 3: Adaptive random placement with collision retry
                 if (!position) {
+                    const maxRetries = 200;
+                    const retryZones = [
+                        { x: 0, y: 0, w: containerWidth, h: containerHeight }, // Full area
+                        { x: containerWidth * 0.1, y: containerHeight * 0.1, w: containerWidth * 0.8, h: containerHeight * 0.8 }, // Center 80%
+                        { x: containerWidth * 0.2, y: containerHeight * 0.2, w: containerWidth * 0.6, h: containerHeight * 0.6 }  // Center 60%
+                    ];
+                    
+                    for (const zone of retryZones) {
+                        if (position) break;
+                        
+                        for (let retry = 0; retry < maxRetries && !position; retry++) {
+                            const x = zone.x + Math.random() * (zone.w - wordWidth);
+                            const y = zone.y + Math.random() * (zone.h - wordHeight);
+                            
+                            if (x >= 0 && x <= containerWidth - wordWidth && 
+                                y >= 0 && y <= containerHeight - wordHeight) {
+                                
+                                if (!checkCollision(x, y, wordWidth, wordHeight)) {
+                                    position = { x, y };
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Strategy 4: Enhanced edge placement with collision detection
+                if (!position) {
+                    const margin = Math.max(fontSize * 0.5, 20);
                     const edges = [
-                        {x: 10, y: 10},
-                        {x: containerWidth - wordWidth - 10, y: 10},
-                        {x: 10, y: containerHeight - wordHeight - 10},
-                        {x: containerWidth - wordWidth - 10, y: containerHeight - wordHeight - 10},
-                        {x: containerWidth / 2 - wordWidth / 2, y: 10},
-                        {x: containerWidth / 2 - wordWidth / 2, y: containerHeight - wordHeight - 10},
-                        {x: 10, y: containerHeight / 2 - wordHeight / 2},
-                        {x: containerWidth - wordWidth - 10, y: containerHeight / 2 - wordHeight / 2}
+                        {x: margin, y: margin}, // Top-left
+                        {x: containerWidth - wordWidth - margin, y: margin}, // Top-right
+                        {x: margin, y: containerHeight - wordHeight - margin}, // Bottom-left
+                        {x: containerWidth - wordWidth - margin, y: containerHeight - wordHeight - margin}, // Bottom-right
+                        {x: containerWidth / 2 - wordWidth / 2, y: margin}, // Top-center
+                        {x: containerWidth / 2 - wordWidth / 2, y: containerHeight - wordHeight - margin}, // Bottom-center
+                        {x: margin, y: containerHeight / 2 - wordHeight / 2}, // Left-center
+                        {x: containerWidth - wordWidth - margin, y: containerHeight / 2 - wordHeight / 2} // Right-center
                     ];
                     
                     for (const edge of edges) {
-                        let hasCollision = false;
-                        for (const placed of placedWords) {
-                            const distance = Math.sqrt(
-                                Math.pow(edge.x - placed.x, 2) + Math.pow(edge.y - placed.y, 2)
-                            );
-                            const minDistance = Math.max(wordWidth, wordHeight) + Math.max(placed.width, placed.height) + 25;
+                        if (edge.x >= 0 && edge.x <= containerWidth - wordWidth && 
+                            edge.y >= 0 && edge.y <= containerHeight - wordHeight) {
                             
-                            if (distance < minDistance) {
-                                hasCollision = true;
+                            if (!checkCollision(edge.x, edge.y, wordWidth, wordHeight)) {
+                                position = edge;
                                 break;
                             }
-                        }
-                        
-                        if (!hasCollision) {
-                            position = edge;
-                            break;
                         }
                     }
                 }
                 
-                // Final fallback - place with minimum spacing
+                // Final fallback - forced placement with warning
                 if (!position) {
-                    position = {
-                        x: Math.random() * (containerWidth - wordWidth),
-                        y: Math.random() * (containerHeight - wordHeight)
+                    console.warn(`Unable to place word "${item.word}" without overlap. Forcing placement.`);
+                    
+                    // Try to find least conflicted position
+                    let bestPosition = null;
+                    let minConflicts = Infinity;
+                    
+                    for (let attempt = 0; attempt < 50; attempt++) {
+                        const x = Math.random() * (containerWidth - wordWidth);
+                        const y = Math.random() * (containerHeight - wordHeight);
+                        
+                        let conflicts = 0;
+                        for (const placed of placedWords) {
+                            if (checkCollision(x, y, wordWidth, wordHeight)) {
+                                conflicts++;
+                            }
+                        }
+                        
+                        if (conflicts < minConflicts) {
+                            minConflicts = conflicts;
+                            bestPosition = { x, y };
+                            if (conflicts === 0) break;
+                        }
+                    }
+                    
+                    position = bestPosition || { 
+                        x: Math.random() * (containerWidth - wordWidth), 
+                        y: Math.random() * (containerHeight - wordHeight) 
                     };
                 }
                 
+                // Apply position to word element
                 wordElement.style.left = position.x + 'px';
                 wordElement.style.top = position.y + 'px';
                 
-                // Store word info for collision detection
+                // Store word info for collision detection with exact bounding box
                 placedWords.push({
-                    x: position.x + wordWidth / 2,
-                    y: position.y + wordHeight / 2,
+                    x: position.x,
+                    y: position.y,
                     width: wordWidth,
-                    height: wordHeight
+                    height: wordHeight,
+                    word: item.word // For debugging
                 });
                 
-                // Add hover events with tooltip positioned above the word
+                // Add hover events with enhanced tooltip
                 wordElement.addEventListener('mouseenter', function(e) {
-                    tooltip.textContent = `${item.word}: ${item.count} occurrences`;
+                    const freqPercentage = ((item.count / maxFreq) * 100).toFixed(1);
+                    
+                    // Get color based on frequency for tooltip with more variety
+                    let tooltipColor = '#00ffff';
+                    const colorIndex = wordIndex % 3; // Use same index for consistency
+                    
+                    if (freqPercentage >= 80) {
+                        const extremeColors = ['#ff00ff', '#ff0000', '#cc00cc'];
+                        tooltipColor = extremeColors[colorIndex];
+                    } else if (freqPercentage >= 60) {
+                        const veryHighColors = ['#ff4444', '#ff6600', '#ff6b6b'];
+                        tooltipColor = veryHighColors[colorIndex];
+                    } else if (freqPercentage >= 40) {
+                        const highColors = ['#ff8c00', '#ffff00', '#ffcc00'];
+                        tooltipColor = highColors[colorIndex];
+                    } else if (freqPercentage >= 20) {
+                        const mediumColors = ['#00ff00', '#00bfff', '#40e0d0'];
+                        tooltipColor = mediumColors[colorIndex];
+                    } else {
+                        const lowColors = ['#00ffff', '#87ceeb', '#da70d6'];
+                        tooltipColor = lowColors[colorIndex];
+                    }
+                    
+                    tooltip.innerHTML = `
+                        <div style="text-align: center;">
+                            <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px; color: ${tooltipColor};">${item.word}</div>
+                            <div style="font-size: 12px; color: #00ffff;">${item.count} occurrences</div>
+                            <div style="font-size: 10px; color: #e8f4fd;">${freqPercentage}% of max frequency</div>
+                        </div>
+                    `;
                     
                     // Position tooltip above the word
                     const rect = wordElement.getBoundingClientRect();
                     const containerRect = wordCloudContainer.getBoundingClientRect();
                     
                     tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
-                    tooltip.style.top = (rect.top - containerRect.top - 35) + 'px';
+                    tooltip.style.top = (rect.top - containerRect.top - 45) + 'px';
                     tooltip.classList.add('show');
                 });
                 
@@ -3055,7 +3359,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.8);
+                background: rgba(0,0,0,0.9);
                 display: flex;
                 justify-content: center;
                 align-items: center;

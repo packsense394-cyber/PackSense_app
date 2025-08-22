@@ -818,6 +818,25 @@ def product_overview(product_folder):
         packaging_related = 0
         packaging_percentage = 0
     
+    # Apply the same comprehensive classification algorithm as the analysis page
+    # to ensure metrics consistency between overview and analysis pages
+    if all_reviews:
+        print("Applying comprehensive packaging classification for product overview...")
+        classified_reviews = classify_reviews_as_packaging(all_reviews, components_list, conditions_list)
+        classification_summary = get_packaging_classification_summary(classified_reviews)
+        
+        # Update metrics with classification results to match analysis page
+        total_reviews = classification_summary['total_reviews']
+        packaging_related = classification_summary['packaging_reviews']
+        packaging_percentage = classification_summary['packaging_percentage']
+        
+        # Recalculate sentiment counts from classified reviews
+        positive_count = len([r for r in classified_reviews if r.get('sentiment') == "positive"])
+        negative_count = len([r for r in classified_reviews if r.get('sentiment') == "negative"])
+        neutral_count = len([r for r in classified_reviews if r.get('sentiment') == "neutral"])
+        
+        print(f"Product overview metrics updated: {packaging_related} packaging-related out of {total_reviews} total reviews")
+    
     # Load product image
     product_image_url = url_for('static', filename=f"{product_folder}/product.jpg")
     

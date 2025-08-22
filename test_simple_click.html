@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Click Test</title>
+    <style>
+        .node {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 500px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Click Test</h1>
+    <p>Click on any node to test the functionality:</p>
+    
+    <div class="node" onclick="showNodeDetails('label', document.getElementById('info-panel'))">label</div>
+    <div class="node" onclick="showNodeDetails('bottle', document.getElementById('info-panel'))">bottle</div>
+    <div class="node" onclick="showNodeDetails('leak', document.getElementById('info-panel'))">leak</div>
+    <div class="node" onclick="showNodeDetails('plastic', document.getElementById('info-panel'))">plastic</div>
+    
+    <div id="info-panel" class="info-panel">
+        <button onclick="this.parentElement.style.display='none'" style="float: right; background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">X</button>
+        <div id="info-content"></div>
+    </div>
+    
+    <script>
+        // Simulate the data that would be passed to the template
+        const keywordSentenceMap = {
+            "label": [
+                {"sentence": "The oxi kind with the orange on the label is my other favorite..", "review_text": "Sample review text..."},
+                {"sentence": "Look closely at THIS label compared with the ones at local stores.", "review_text": "Sample review text..."},
+                {"sentence": "Box had a label that said damaged when received by carrier.", "review_text": "Sample review text..."}
+            ],
+            "bottle": [
+                {"sentence": "The bottle is well designed and easy to use.", "review_text": "Sample review text..."},
+                {"sentence": "I like the bottle design.", "review_text": "Sample review text..."}
+            ],
+            "leak": [
+                {"sentence": "The bottle started to leak after a few uses.", "review_text": "Sample review text..."},
+                {"sentence": "No leaks so far, which is great.", "review_text": "Sample review text..."}
+            ],
+            "plastic": [
+                {"sentence": "The plastic container is durable.", "review_text": "Sample review text..."}
+            ]
+        };
+        
+        const keywordImageMap = {
+            "label": ["Dawn_K_review0_0.jpg", "Vanns40_review1_0.jpg", "Maime_review2_0.jpg"],
+            "bottle": ["Aurihazuma_review0_0.jpg", "J9Kicks_review0_0.jpg"],
+            "leak": ["R_Patterson_review3_0.jpg", "Jennifer_Pressley_review6_0.jpg"],
+            "plastic": ["J9Kicks_review0_0.jpg", "Todd_review0_0.jpg"]
+        };
+        
+        function showNodeDetails(node, infoPanel) {
+            console.log('showNodeDetails called for node:', node);
+            alert('showNodeDetails called for: ' + node);
+            
+            // Get related reviews and images
+            let relatedReviews = keywordSentenceMap[node] || [];
+            let relatedImages = keywordImageMap[node] || [];
+            
+            console.log('Related reviews:', relatedReviews);
+            console.log('Related images:', relatedImages);
+            
+            // Extract sentence text
+            let relatedSentences = [];
+            if (relatedReviews.length > 0) {
+                if (typeof relatedReviews[0] === 'object' && relatedReviews[0].sentence) {
+                    relatedSentences = relatedReviews.map(item => item.sentence);
+                } else {
+                    relatedSentences = relatedReviews;
+                }
+            }
+            
+            console.log('Related sentences:', relatedSentences);
+            
+            // Force display the info panel first
+            infoPanel.style.display = 'block';
+            
+            let content = `
+                <h3 style="margin: 0 0 20px 0; color: #333; text-align: center;">${node.toUpperCase()}</h3>
+                
+                <h4 style="margin: 0 0 15px 0; color: #333;">
+                    <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 8px;">${relatedSentences.length}</span>
+                    Related Sentences
+                </h4>
+            `;
+            
+            if (relatedSentences.length > 0) {
+                relatedSentences.slice(0, 3).forEach((sentenceText, index) => {
+                    const displayText = sentenceText.length > 100 ? sentenceText.substring(0, 100) + '...' : sentenceText;
+                    content += `
+                        <div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <p style="margin: 0; font-size: 0.9em; color: #333; line-height: 1.4;">${displayText}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                content += `<p style="font-size: 0.9em; color: #999; font-style: italic;">No related sentences found</p>`;
+            }
+            
+            // Add related images section
+            content += `
+                <h4 style="margin: 30px 0 15px 0; color: #333;">
+                    <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 8px;">${relatedImages.length}</span>
+                    Related Images
+                </h4>
+            `;
+            
+            if (relatedImages.length > 0) {
+                content += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; margin-top: 10px;">`;
+                
+                relatedImages.slice(0, 4).forEach((imgUrl, index) => {
+                    content += `
+                        <div style="text-align: center;">
+                            <img src="static/Persil_Intense_Fresh_Everyday_Clean,_Liquid_Laundry_Detergent,_High_Efficiency_(HE),_Deep_Stain_Removal,_2X_Concentrated,_82.5_fl_oz,_110_Loads_2025-08-16/review_images/${imgUrl}" 
+                                 alt="Related image" 
+                                 style="width: 100%; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #eee;"
+                                 onerror="this.style.display='none'">
+                        </div>
+                    `;
+                });
+                
+                content += `</div>`;
+            } else {
+                content += `<p style="font-size: 0.9em; color: #999; font-style: italic;">No related images found</p>`;
+            }
+            
+            document.getElementById('info-content').innerHTML = content;
+        }
+    </script>
+</body>
+</html>

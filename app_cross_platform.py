@@ -258,8 +258,8 @@ def index():
             
             print(f"Cross-platform analysis completed. Results saved to {analysis_file}")
             
-            # Redirect to the existing analysis page but with enhanced data
-            return redirect(url_for('analysis', product_folder=product_folder))
+            # Redirect to the product overview page
+            return redirect(url_for('product_overview', product_folder=product_folder))
             
         except Exception as e:
             print(f"Error in cross-platform analysis: {e}")
@@ -490,6 +490,90 @@ def analysis(product_folder):
         base_image_url=base_image_url,
         packaging_freq=packaging_freq,
         enhanced_metrics=enhanced_metrics,  # Pass enhanced metrics to template
+    )
+
+@app.route("/product_overview/<product_folder>")
+def product_overview(product_folder):
+    """Product overview page showing product details and summary - cross-platform compatible"""
+    # Load data from the product folder
+    folder = os.path.join("static", product_folder)
+    
+    # Check if enhanced recursive analysis data exists
+    recursive_analysis_file = os.path.join(folder, "recursive_analysis.json")
+    if os.path.exists(recursive_analysis_file):
+        with open(recursive_analysis_file, 'r') as f:
+            recursive_data = json.load(f)
+        
+        # Use enhanced data
+        all_reviews = recursive_data.get('all_reviews', [])
+        total_reviews = recursive_data.get('total_reviews_extracted', 0)
+        packaging_related = recursive_data.get('packaging_related_reviews', 0)
+        packaging_percentage = recursive_data.get('packaging_percentage', 0)
+        
+        # Enhanced sentiment breakdown
+        sentiment_breakdown = recursive_data.get('sentiment_breakdown', {})
+        positive_count = sentiment_breakdown.get('positive', 0)
+        negative_count = sentiment_breakdown.get('negative', 0)
+        neutral_count = sentiment_breakdown.get('neutral', 0)
+    else:
+        # Fallback to original logic
+        excel_path = os.path.join(folder, f"{product_folder}_reviews_keywords_and_relationships.xlsx")
+        if os.path.exists(excel_path):
+            reviews_df = pd.read_excel(excel_path, sheet_name='Reviews')
+            all_reviews = reviews_df.to_dict('records')
+        else:
+            all_reviews = []
+        
+        # Calculate metrics
+        total_reviews = len(all_reviews)
+        positive_count = sum(1 for r in all_reviews if analyze_sentiment(str(r.get("review_text", ""))) == "positive")
+        negative_count = sum(1 for r in all_reviews if analyze_sentiment(str(r.get("review_text", ""))) == "negative")
+        neutral_count = total_reviews - positive_count - negative_count
+        
+        # Default values for enhanced features
+        packaging_related = 0
+        packaging_percentage = 0
+    
+    # Apply the same comprehensive classification algorithm as the analysis page
+    # to ensure metrics consistency between overview and analysis pages
+    if all_reviews:
+        print("Applying comprehensive packaging classification for product overview...")
+        # Import the classification functions
+        from nlp_utils import classify_reviews_as_packaging, get_packaging_classification_summary
+        classified_reviews = classify_reviews_as_packaging(all_reviews, components_list, conditions_list)
+        classification_summary = get_packaging_classification_summary(classified_reviews)
+        
+        # Update metrics with classification results to match analysis page
+        total_reviews = classification_summary['total_reviews']
+        packaging_related = classification_summary['packaging_reviews']
+        packaging_percentage = classification_summary['packaging_percentage']
+        
+        # Recalculate sentiment counts from classified reviews
+        positive_count = len([r for r in classified_reviews if r.get('sentiment') == "positive"])
+        negative_count = len([r for r in classified_reviews if r.get('sentiment') == "negative"])
+        neutral_count = len([r for r in classified_reviews if r.get('sentiment') == "neutral"])
+        
+        print(f"Product overview metrics updated: {packaging_related} packaging-related out of {total_reviews} total reviews")
+    
+    # Load product image
+    product_image_url = url_for('static', filename=f"{product_folder}/product.jpg")
+    
+    # Load sample reviews (first 5)
+    sample_reviews = all_reviews[:5] if all_reviews else []
+    
+    return render_template(
+        "product_overview.html",
+        product_name=product_folder.replace('_', ' ').replace('-', ' '),
+        product_folder=product_folder,
+        total_reviews=total_reviews,
+        packaging_related=packaging_related,
+        packaging_percentage=packaging_percentage,
+        positive_count=positive_count,
+        negative_count=negative_count,
+        neutral_count=neutral_count,
+        product_image_url=product_image_url,
+        sample_reviews=sample_reviews,
+        analysis_url=url_for('analysis', product_folder=product_folder)
     )
 
 @app.route("/download_images/<product_folder>")

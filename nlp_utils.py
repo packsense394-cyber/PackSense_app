@@ -241,12 +241,21 @@ def map_keyword_to_images(reviews, keywords):
             review_text = str(review_text)
         text = review_text.lower()
         
-        # Ensure image_links is a string before splitting
+        # Try image_links first, then review_images as fallback
         image_links = review.get("image_links", "")
         if image_links is None:
             image_links = ""
         else:
             image_links = str(image_links)
+        
+        # If image_links is empty, try review_images
+        if not image_links:
+            review_images = review.get("review_images", [])
+            if isinstance(review_images, list):
+                image_links = ", ".join([str(img) for img in review_images if img])
+            else:
+                image_links = str(review_images) if review_images else ""
+        
         imgs = image_links.split(", ") if image_links else []
         for kw in keywords:
             if kw.lower() in text:
@@ -558,3 +567,307 @@ def filter_reviews_by_keyword(reviews: list, keyword: str) -> list:
     Filter reviews by keyword
     """
     return [review for review in reviews if keyword.lower() in review.get('review_text', '').lower()] 
+
+def classify_reviews_as_packaging(reviews: list, components_list: list, conditions_list: list) -> list:
+    """
+    Comprehensive algorithm to classify reviews as packaging-related or not.
+    
+    Uses multiple classification techniques:
+    1. Keyword-based classification
+    2. Semantic similarity analysis
+    3. Context analysis
+    4. Confidence scoring
+    5. Review structure analysis
+    
+    Args:
+        reviews: List of review dictionaries
+        components_list: List of packaging component keywords
+        conditions_list: List of packaging condition keywords
+    
+    Returns:
+        List of reviews with updated 'is_packaging_related' field and confidence scores
+    """
+    print("Starting comprehensive review classification...")
+    
+    # Expand keyword lists with synonyms and related terms
+    expanded_components = expand_packaging_keywords(components_list)
+    expanded_conditions = expand_packaging_keywords(conditions_list)
+    
+    # Create comprehensive packaging vocabulary
+    packaging_vocabulary = set(expanded_components + expanded_conditions)
+    
+    # Add common packaging-related phrases
+    packaging_phrases = [
+        "packaging", "package", "container", "bottle", "box", "bag", "can", "jar", "tube", "pouch",
+        "leak", "leaking", "leaked", "broken", "break", "broke", "damage", "damaged", "crack", "cracked",
+        "seal", "sealed", "cap", "lid", "top", "cover", "plastic", "glass", "metal", "paper", "cardboard",
+        "label", "labeled", "wrapped", "wrap", "protective", "protection", "secure", "secured",
+        "spill", "spilled", "mess", "dirty", "clean", "hygienic", "safe", "unsafe", "dangerous",
+        "tin", "aluminum", "steel", "foil", "bubble", "cushion", "padding", "tape", "adhesive",
+        "transparent", "clear", "opaque", "color", "colored", "design", "shape", "size", "large", "small",
+        "shipping", "delivery", "arrived", "damaged", "crushed", "dented", "torn", "ripped",
+        "defective", "mold", "expired", "loose", "tight", "secure", "protective", "fragile",
+        "handle", "grip", "easy to use", "difficult to open", "hard to open", "easy to pour",
+        "drip", "dripping", "overflow", "overflowing", "splash", "splashing", "spray", "spraying"
+    ]
+    
+    packaging_vocabulary.update(packaging_phrases)
+    
+    classified_reviews = []
+    packaging_count = 0
+    non_packaging_count = 0
+    
+    for review in reviews:
+        review_text = str(review.get("review_text", "")).lower()
+        review_title = str(review.get("review_title", "")).lower()
+        full_text = f"{review_title} {review_text}"
+        
+        # Calculate classification score using multiple methods
+        score = 0
+        confidence = 0
+        classification_methods = []
+        
+        # Method 1: Direct keyword matching
+        keyword_score = calculate_keyword_score(full_text, packaging_vocabulary)
+        score += keyword_score * 0.4  # 40% weight
+        classification_methods.append(f"Keyword: {keyword_score:.2f}")
+        
+        # Method 2: Phrase and context analysis
+        phrase_score = analyze_packaging_phrases(full_text)
+        score += phrase_score * 0.3  # 30% weight
+        classification_methods.append(f"Phrase: {phrase_score:.2f}")
+        
+        # Method 3: Review structure analysis
+        structure_score = analyze_review_structure(review_text, review_title)
+        score += structure_score * 0.2  # 20% weight
+        classification_methods.append(f"Structure: {structure_score:.2f}")
+        
+        # Method 4: Sentiment-context analysis
+        sentiment_score = analyze_sentiment_context(review_text, review.get("sentiment", ""))
+        score += sentiment_score * 0.1  # 10% weight
+        classification_methods.append(f"Sentiment: {sentiment_score:.2f}")
+        
+        # Determine classification threshold
+        threshold = 0.3  # Reviews with score >= 0.3 are classified as packaging-related
+        
+        is_packaging = score >= threshold
+        confidence = min(score, 1.0)  # Confidence is the score, capped at 1.0
+        
+        # Update review with classification results
+        review['is_packaging_related'] = is_packaging
+        review['packaging_score'] = score
+        review['packaging_confidence'] = confidence
+        review['classification_methods'] = classification_methods
+        
+        if is_packaging:
+            packaging_count += 1
+        else:
+            non_packaging_count += 1
+        
+        classified_reviews.append(review)
+    
+    print(f"Classification completed:")
+    print(f"  Packaging-related: {packaging_count}")
+    print(f"  Non-packaging: {non_packaging_count}")
+    print(f"  Total: {len(reviews)}")
+    print(f"  Packaging percentage: {(packaging_count/len(reviews)*100):.1f}%")
+    
+    return classified_reviews
+
+def expand_packaging_keywords(keywords: list) -> list:
+    """Expand keywords with synonyms and related terms."""
+    expanded = set(keywords)
+    
+    # Add common variations and synonyms
+    synonym_map = {
+        'bottle': ['bottles', 'bottling', 'bottled'],
+        'package': ['packages', 'packaging', 'packaged'],
+        'container': ['containers', 'containing'],
+        'leak': ['leaks', 'leaking', 'leaked', 'leakage'],
+        'damage': ['damages', 'damaged', 'damaging'],
+        'break': ['breaks', 'breaking', 'broken', 'broke'],
+        'spill': ['spills', 'spilling', 'spilled'],
+        'mess': ['messy', 'messes'],
+        'clean': ['cleans', 'cleaning', 'cleaned'],
+        'secure': ['secures', 'securing', 'secured', 'security'],
+        'protective': ['protects', 'protecting', 'protected', 'protection'],
+        'plastic': ['plastics'],
+        'glass': ['glasses'],
+        'metal': ['metals', 'metallic'],
+        'cardboard': ['cardboards'],
+        'tape': ['tapes', 'taping', 'taped'],
+        'label': ['labels', 'labeling', 'labeled'],
+        'seal': ['seals', 'sealing', 'sealed'],
+        'cap': ['caps', 'capping', 'capped'],
+        'lid': ['lids'],
+        'box': ['boxes', 'boxing', 'boxed'],
+        'bag': ['bags', 'bagging', 'bagged'],
+        'can': ['cans', 'canning', 'canned'],
+        'jar': ['jars'],
+        'tube': ['tubes', 'tubing', 'tubed'],
+        'pouch': ['pouches'],
+        'tin': ['tins'],
+        'sachet': ['sachets'],
+        'envelope': ['envelopes'],
+        'mold': ['molds', 'molding', 'molded'],
+        'padding': ['pads', 'padded'],
+        'bubble': ['bubbles', 'bubbling', 'bubbled'],
+        'cushion': ['cushions', 'cushioning', 'cushioned'],
+        'wrap': ['wraps', 'wrapping', 'wrapped'],
+        'color': ['colors', 'coloring', 'colored'],
+        'design': ['designs', 'designing', 'designed'],
+        'size': ['sizes', 'sizing', 'sized'],
+        'shape': ['shapes', 'shaping', 'shaped']
+    }
+    
+    for keyword in keywords:
+        if keyword in synonym_map:
+            expanded.update(synonym_map[keyword])
+    
+    return list(expanded)
+
+def calculate_keyword_score(text: str, vocabulary: set) -> float:
+    """Calculate keyword-based score for packaging classification."""
+    words = set(text.split())
+    matches = words.intersection(vocabulary)
+    
+    if not matches:
+        return 0.0
+    
+    # Weight by frequency and importance
+    score = 0.0
+    for match in matches:
+        # Base score for each match
+        base_score = 0.1
+        
+        # Bonus for multiple occurrences
+        count = text.count(match)
+        if count > 1:
+            base_score += min(count * 0.05, 0.2)  # Cap at 0.2 bonus
+        
+        # Bonus for important terms
+        important_terms = {'leak', 'damage', 'broken', 'spill', 'mess', 'packaging', 'container'}
+        if match in important_terms:
+            base_score += 0.1
+        
+        score += base_score
+    
+    return min(score, 1.0)  # Cap at 1.0
+
+def analyze_packaging_phrases(text: str) -> float:
+    """Analyze text for packaging-related phrases and context."""
+    score = 0.0
+    
+    # Packaging-specific phrases with weights
+    packaging_phrases = {
+        'damaged during shipping': 0.8,
+        'arrived damaged': 0.8,
+        'packaging was': 0.7,
+        'container was': 0.7,
+        'bottle was': 0.7,
+        'box was': 0.7,
+        'leaked out': 0.8,
+        'spilled out': 0.8,
+        'came broken': 0.8,
+        'was broken': 0.7,
+        'got damaged': 0.7,
+        'easy to pour': 0.6,
+        'hard to open': 0.6,
+        'difficult to open': 0.6,
+        'messy to use': 0.7,
+        'clean to use': 0.5,
+        'secure packaging': 0.6,
+        'protective packaging': 0.6,
+        'well packaged': 0.5,
+        'poorly packaged': 0.7,
+        'packaging design': 0.6,
+        'container design': 0.6,
+        'bottle design': 0.6,
+        'cap was loose': 0.8,
+        'lid was loose': 0.8,
+        'seal was broken': 0.8,
+        'tape was': 0.6,
+        'label was': 0.6,
+        'plastic container': 0.6,
+        'glass bottle': 0.6,
+        'cardboard box': 0.6,
+        'metal can': 0.6
+    }
+    
+    for phrase, weight in packaging_phrases.items():
+        if phrase in text:
+            score += weight
+    
+    return min(score, 1.0)
+
+def analyze_review_structure(review_text: str, review_title: str) -> float:
+    """Analyze review structure for packaging-related indicators."""
+    score = 0.0
+    
+    # Check title for packaging indicators
+    title_words = review_title.split()
+    if len(title_words) <= 5:  # Short titles are more likely to be specific
+        packaging_title_words = {'packaging', 'bottle', 'container', 'damaged', 'leak', 'broken', 'arrived'}
+        if any(word in packaging_title_words for word in title_words):
+            score += 0.3
+    
+    # Check for specific review patterns
+    patterns = [
+        'arrived', 'shipping', 'delivery', 'packaged', 'wrapped',
+        'damaged', 'broken', 'leaked', 'spilled', 'mess',
+        'container', 'bottle', 'box', 'package', 'packaging'
+    ]
+    
+    for pattern in patterns:
+        if pattern in review_text:
+            score += 0.1
+    
+    # Check for complaint patterns (often packaging-related)
+    complaint_indicators = ['but', 'however', 'unfortunately', 'disappointed', 'problem', 'issue']
+    if any(indicator in review_text for indicator in complaint_indicators):
+        # If complaint + packaging terms, higher score
+        packaging_terms = ['packaging', 'container', 'bottle', 'damage', 'leak', 'broken']
+        if any(term in review_text for term in packaging_terms):
+            score += 0.2
+    
+    return min(score, 1.0)
+
+def analyze_sentiment_context(review_text: str, sentiment: str) -> float:
+    """Analyze sentiment in context of packaging terms."""
+    score = 0.0
+    
+    # Negative sentiment + packaging terms = likely packaging complaint
+    if sentiment == "negative":
+        packaging_terms = ['packaging', 'container', 'bottle', 'damage', 'leak', 'broken', 'spill', 'mess']
+        if any(term in review_text for term in packaging_terms):
+            score += 0.4
+    
+    # Positive sentiment + packaging terms = likely packaging praise
+    elif sentiment == "positive":
+        packaging_terms = ['packaging', 'container', 'bottle', 'design', 'easy', 'convenient', 'secure']
+        if any(term in review_text for term in packaging_terms):
+            score += 0.2
+    
+    return min(score, 1.0)
+
+def get_packaging_classification_summary(reviews: list) -> dict:
+    """Generate a summary of the packaging classification results."""
+    packaging_reviews = [r for r in reviews if r.get('is_packaging_related', False)]
+    non_packaging_reviews = [r for r in reviews if not r.get('is_packaging_related', False)]
+    
+    # Calculate confidence statistics
+    packaging_confidences = [r.get('packaging_confidence', 0) for r in packaging_reviews]
+    non_packaging_confidences = [r.get('packaging_confidence', 0) for r in non_packaging_reviews]
+    
+    summary = {
+        'total_reviews': len(reviews),
+        'packaging_reviews': len(packaging_reviews),
+        'non_packaging_reviews': len(non_packaging_reviews),
+        'packaging_percentage': (len(packaging_reviews) / len(reviews) * 100) if reviews else 0,
+        'avg_packaging_confidence': sum(packaging_confidences) / len(packaging_confidences) if packaging_confidences else 0,
+        'avg_non_packaging_confidence': sum(non_packaging_confidences) / len(non_packaging_confidences) if non_packaging_confidences else 0,
+        'high_confidence_packaging': len([c for c in packaging_confidences if c >= 0.7]),
+        'low_confidence_packaging': len([c for c in packaging_confidences if c < 0.5])
+    }
+    
+    return summary 
