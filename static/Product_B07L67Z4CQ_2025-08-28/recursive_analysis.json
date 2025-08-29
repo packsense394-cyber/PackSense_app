@@ -1,0 +1,66 @@
+{
+  "total_reviews_extracted": 1,
+  "packaging_related_reviews": 0,
+  "packaging_percentage": 0.0,
+  "sentiment_breakdown": {
+    "positive": 1,
+    "neutral": 0,
+    "negative": 0
+  },
+  "sentiment_percentages": {
+    "positive": 100.0,
+    "negative": 0.0,
+    "neutral": 0.0
+  },
+  "initial_reviews": {
+    "total": 1,
+    "sentiment_counts": {
+      "positive": 1,
+      "negative": 0,
+      "neutral": 0
+    },
+    "sentiment_percentages": {
+      "positive": 100.0,
+      "negative": 0.0,
+      "neutral": 0.0
+    },
+    "reviews": [
+      {
+        "review_text": "Nice alternative to Tide. It has a good smell and cleans well.",
+        "rating": 0,
+        "title": "Tide Alternative.",
+        "date": "Reviewed in the United States on August 16, 2025",
+        "images": [],
+        "sentiment": "positive",
+        "is_packaging_related": false
+      }
+    ]
+  },
+  "packaging_reviews": {
+    "total": 0,
+    "sentiment_counts": {
+      "positive": 0,
+      "negative": 0,
+      "neutral": 0
+    },
+    "sentiment_percentages": {
+      "positive": 0,
+      "negative": 0,
+      "neutral": 0
+    },
+    "reviews": [],
+    "keywords_found": []
+  },
+  "all_reviews": [
+    {
+      "review_text": "Nice alternative to Tide. It has a good smell and cleans well.",
+      "rating": 0,
+      "title": "Tide Alternative.",
+      "date": "Reviewed in the United States on August 16, 2025",
+      "images": [],
+      "sentiment": "positive",
+      "is_packaging_related": false
+    }
+  ],
+  "packaging_terms_searched": []
+}
