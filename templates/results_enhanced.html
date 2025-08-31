@@ -94,6 +94,53 @@
             transform: translateY(-2px);
         }
         
+        /* Slider styling for co-occurrence filters */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-track {
+            background: #ddd;
+            height: 6px;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #667eea;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+        
+        input[type="range"]::-moz-range-track {
+            background: #ddd;
+            height: 6px;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            background: #667eea;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+        
         /* Main layout with sidebar */
         .main-layout {
             display: flex;
@@ -1250,6 +1297,145 @@
 
     <script>
 
+        // Global filter functionality with proper state management
+        window.currentNodes = [];
+        window.currentLinks = [];
+        let filterTimeout;
+        const filterDelay = 300;
+        
+        // Controlled state for sliders
+        let minStrength = 1;
+        let minConnections = 1;
+        
+        // Global filter function
+        window.applyFilters = function() {
+            console.log('applyFilters called with state:', { minStrength, minConnections });
+            
+            // Use controlled state instead of reading from DOM
+            if (window.currentNodes.length === 0) {
+                console.log('No nodes available for filtering');
+                return;
+            }
+            
+            console.log('Applying filters:', { minStrength, minConnections });
+            console.log('Total nodes available:', window.currentNodes.length);
+            console.log('Total links available:', window.currentLinks.length);
+            
+            // Pure, ordered filter pipeline (no in-place mutation)
+            console.log('Starting filter pipeline...');
+            
+            // Step 1: Start with all nodes (no weight filtering)
+            const visibleNodes = window.currentNodes;
+            console.log(`Starting with all nodes: ${visibleNodes.length}`);
+            
+            // Step 2: Filter nodes by number of connections (degree)
+            const connectionsThreshold = minConnections <= 1 ? 0 : Math.floor(minConnections);
+            console.log(`Connections threshold: ${connectionsThreshold}`);
+            
+            // Count connections for each visible node
+            const nodeConnections = {};
+            visibleNodes.forEach(node => {
+                const connections = window.currentLinks.filter(link => {
+                    const sourceId = link.source.id || link.source;
+                    const targetId = link.target.id || link.target;
+                    return sourceId === node.id || targetId === node.id;
+                }).length;
+                nodeConnections[node.id] = connections;
+            });
+            
+            // Filter nodes by connection count
+            const connectionFilteredNodes = visibleNodes.filter(node => {
+                const connections = nodeConnections[node.id] || 0;
+                const isVisible = connections >= connectionsThreshold;
+                if (!isVisible) {
+                    console.log(`Node "${node.name}" filtered out: connections=${connections} < threshold=${connectionsThreshold}`);
+                }
+                return isVisible;
+            });
+            
+            console.log(`Connections filtering: ${visibleNodes.length} → ${connectionFilteredNodes.length} nodes`);
+            if (connectionFilteredNodes.length > 0) {
+                console.log('Visible nodes after connections filter:', connectionFilteredNodes.map(n => `${n.name}(${nodeConnections[n.id]})`));
+            }
+            
+            // Step 3: Rebuild edges to only those whose both ends are still visible
+            const visibleLinks = window.currentLinks.filter(link => {
+                const sourceId = link.source.id || link.source;
+                const targetId = link.target.id || link.target;
+                const sourceVisible = connectionFilteredNodes.some(n => n.id === sourceId);
+                const targetVisible = connectionFilteredNodes.some(n => n.id === targetId);
+                return sourceVisible && targetVisible;
+            });
+            console.log(`Edge filtering: ${window.currentLinks.length} → ${visibleLinks.length} edges`);
+            
+            // Step 3: Compute normalization on this edge set
+            if (visibleLinks.length === 0) {
+                console.log('No connections match filters - rendering empty state');
+                if (window.updateGraphVisibility) {
+                    window.updateGraphVisibility([], []);
+                }
+                return;
+            }
+            
+            const weights = visibleLinks.map(l => l.weight);
+            const wMin = Math.min(...weights);
+            const wMax = Math.max(...weights);
+            
+            console.log(`Edge weight range: min=${wMin}, max=${wMax}`);
+            
+            // Step 4: Filter edges by normalized strength
+            const strengthThreshold = minStrength <= 1 ? 0 : Math.floor(minStrength);
+            console.log(`Strength threshold: ${strengthThreshold}`);
+            
+            const strengthFilteredLinks = visibleLinks.filter(link => {
+                let normalizedStrength;
+                if (wMax === wMin) {
+                    normalizedStrength = 3.0; // All edges have same weight
+                } else {
+                    normalizedStrength = 1 + 4 * (link.weight - wMin) / (wMax - wMin);
+                }
+                
+                const isVisible = normalizedStrength >= strengthThreshold;
+                if (!isVisible) {
+                    console.log(`Link filtered out: ${link.source.id || link.source} -> ${link.target.id || link.target}, weight=${link.weight}, normalized=${normalizedStrength.toFixed(2)} < threshold=${strengthThreshold}`);
+                }
+                return isVisible;
+            });
+            
+            console.log(`Strength filtering: ${visibleLinks.length} → ${strengthFilteredLinks.length} edges`);
+            
+            if (strengthFilteredLinks.length > 0) {
+                console.log('Visible links after strength filter:', strengthFilteredLinks.length);
+            }
+            // Step 5: Drop nodes with degree 0 after edge filtering
+            const finalVisibleNodes = connectionFilteredNodes.filter(node => {
+                const hasConnections = strengthFilteredLinks.some(link => 
+                    (link.source.id || link.source) === node.id || 
+                    (link.target.id || link.target) === node.id
+                );
+                if (!hasConnections) {
+                    console.log(`Node "${node.name}" dropped: no connections after edge filtering`);
+                }
+                return hasConnections;
+            });
+            
+            console.log(`Final result: ${finalVisibleNodes.length} nodes, ${strengthFilteredLinks.length} edges`);
+            
+            // Update the graph with final filtered data
+            if (window.updateGraphVisibility) {
+                window.updateGraphVisibility(finalVisibleNodes, strengthFilteredLinks);
+            }
+        };
+        
+        // Debounced filter application
+        window.debouncedApplyFilters = function() {
+            console.log('debouncedApplyFilters called, setting timeout...');
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => {
+                console.log('Timeout fired, calling applyFilters...');
+                window.applyFilters();
+            }, filterDelay);
+        };
         
         // Global variables for review data
         window.reviewsData = [];
@@ -1773,7 +1959,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.8);
+                background: #000000;
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -1782,7 +1968,7 @@
             
             const modalContent = document.createElement('div');
             modalContent.style.cssText = `
-                background: white;
+                background: #000000;
                 border-radius: 15px;
                 padding: 30px;
                 width: 95vw;
@@ -1822,7 +2008,7 @@
             title.textContent = 'Interactive Co-occurrence Network';
             title.style.cssText = `
                 margin: 0;
-                color: #333;
+                color: #ffffff;
                 font-size: 1.5em;
             `;
             
@@ -1830,28 +2016,48 @@
             resetButton.textContent = 'Reset View';
             resetButton.style.cssText = `
                 padding: 8px 16px;
-                background: #667eea;
-                color: white;
+                background: #ffffff;
+                color: #000000;
                 border: none;
                 border-radius: 5px;
                 cursor: pointer;
                 font-size: 0.9em;
             `;
             resetButton.onclick = function() {
-                                    // Reset all nodes and links to normal
-                    node.attr('opacity', 1);
-                    link.attr('stroke-opacity', 0.8).attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5));
+                // Reset sliders to default values based on actual data
+                const strengthSlider = document.getElementById('connection-strength-slider');
+                const connectionsSlider = document.getElementById('connections-slider');
+                const strengthValue = document.getElementById('connection-strength-value');
+                const connectionsValue = document.getElementById('connections-value');
+                
+                if (strengthSlider && connectionsSlider && strengthValue && connectionsValue) {
+                    // Reset all sliders to 1 (show everything)
+                    strengthSlider.value = 1;
+                    connectionsSlider.value = 1;
+                    strengthValue.textContent = '1';
+                    connectionsValue.textContent = '1';
+                    console.log('Reset button clicked - all sliders reset to 1');
+                }
+                
+                // Reset global state
+                minStrength = 1;
+                minConnections = 1;
+                
+                // Show all nodes and links (reset to initial state)
+                if (window.updateGraphVisibility) {
+                    window.updateGraphVisibility(null, null); // This will show everything
+                }
                 
                 // Reset info panel to default content
                 infoPanel.innerHTML = `
-                    <div style="text-align: center; color: #666; padding: 50px 20px;">
-                        <h3 style="margin: 0 0 20px 0; color: #333;">Co-occurrence Network</h3>
+                    <div style="text-align: center; color: #ffffff; padding: 50px 20px;">
+                        <h3 style="margin: 0 0 20px 0; color: #ffffff;">Co-occurrence Network</h3>
                         <p style="margin: 0; font-size: 1.1em;">Click on any node to see related reviews and images</p>
-                        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin: 0 0 15px 0; color: #333;">Network Information</h4>
-                            <p style="margin: 5px 0; color: #666;"><strong>Total Nodes:</strong> <span id="node-count">-</span></p>
-                            <p style="margin: 5px 0; color: #666;"><strong>Total Connections:</strong> <span id="link-count">-</span></p>
-                            <p style="margin: 5px 0; color: #666;"><strong>Packaging Terms:</strong> <span id="term-count">-</span></p>
+                        <div style="margin-top: 30px; padding: 20px; background: #000000; border-radius: 8px; border: 1px solid #ffffff;">
+                            <h4 style="margin: 0 0 15px 0; color: #ffffff;">Network Information</h4>
+                            <p style="margin: 5px 0; color: #ffffff;"><strong>Total Nodes:</strong> <span id="node-count">-</span></p>
+                            <p style="margin: 5px 0; color: #ffffff;"><strong>Total Connections:</strong> <span id="link-count">-</span></p>
+                            <p style="margin: 5px 0; color: #ffffff;"><strong>Packaging Terms:</strong> <span id="term-count">-</span></p>
                         </div>
                     </div>
                 `;
@@ -1860,13 +2066,210 @@
             titleContainer.appendChild(title);
             titleContainer.appendChild(resetButton);
             
+            // Filter controls section
+            const filterContainer = document.createElement('div');
+            filterContainer.style.cssText = `
+                background: #000000;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 20px;
+                border: 1px solid #ffffff;
+            `;
+            
+            // Filter title
+            const filterTitle = document.createElement('h4');
+            filterTitle.textContent = 'Filter Controls';
+            filterTitle.style.cssText = `
+                margin: 0 0 15px 0;
+                color: #ffffff;
+                font-size: 1.1em;
+            `;
+            filterContainer.appendChild(filterTitle);
+            
+            // Filter controls row
+            const filterRow = document.createElement('div');
+            filterRow.style.cssText = `
+                display: flex;
+                gap: 30px;
+                align-items: center;
+                flex-wrap: wrap;
+            `;
+            
+
+            
+            // Min Connection Strength slider
+            const strengthFilterGroup = document.createElement('div');
+            strengthFilterGroup.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                min-width: 200px;
+            `;
+            
+            const strengthLabel = document.createElement('label');
+            strengthLabel.textContent = 'Min Link Weight (1-5)';
+            strengthLabel.setAttribute('for', 'connection-strength-slider');
+            strengthLabel.style.cssText = `
+                font-weight: 600;
+                color: #ffffff;
+                font-size: 0.9em;
+            `;
+            
+            const strengthSliderContainer = document.createElement('div');
+            strengthSliderContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            const strengthSlider = document.createElement('input');
+            strengthSlider.type = 'range';
+            strengthSlider.id = 'connection-strength-slider';
+            strengthSlider.min = '1';
+            strengthSlider.max = '5';
+            strengthSlider.value = '1';
+            strengthSlider.step = '0.1';
+            strengthSlider.style.cssText = `
+                flex: 1;
+                height: 6px;
+                border-radius: 3px;
+                background: #ddd;
+                outline: none;
+                cursor: pointer;
+            `;
+            
+            const strengthValue = document.createElement('span');
+            strengthValue.id = 'connection-strength-value';
+            strengthValue.textContent = '1';
+            strengthValue.style.cssText = `
+                font-weight: 600;
+                color: #ffffff;
+                min-width: 30px;
+                text-align: center;
+            `;
+            
+            strengthSliderContainer.appendChild(strengthSlider);
+            strengthSliderContainer.appendChild(strengthValue);
+            strengthFilterGroup.appendChild(strengthLabel);
+            strengthFilterGroup.appendChild(strengthSliderContainer);
+            
+            // Min Connections slider
+            const connectionsFilterGroup = document.createElement('div');
+            connectionsFilterGroup.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                min-width: 200px;
+            `;
+            
+            const connectionsLabel = document.createElement('label');
+            connectionsLabel.textContent = 'Min Connections';
+            connectionsLabel.setAttribute('for', 'connections-slider');
+            connectionsLabel.style.cssText = `
+                font-weight: 600;
+                color: #ffffff;
+                font-size: 0.9em;
+            `;
+            
+            const connectionsSliderContainer = document.createElement('div');
+            connectionsSliderContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            const connectionsSlider = document.createElement('input');
+            connectionsSlider.type = 'range';
+            connectionsSlider.id = 'connections-slider';
+            connectionsSlider.min = '1';
+            connectionsSlider.max = '50'; // Will be updated dynamically based on actual data
+            connectionsSlider.value = '1';
+            connectionsSlider.step = '1';
+            connectionsSlider.style.cssText = `
+                flex: 1;
+                height: 6px;
+                border-radius: 3px;
+                background: #ddd;
+                outline: none;
+                cursor: pointer;
+            `;
+            
+            const connectionsValue = document.createElement('span');
+            connectionsValue.id = 'connections-value';
+            connectionsValue.textContent = '1';
+            connectionsValue.style.cssText = `
+                font-weight: 600;
+                color: #ffffff;
+                min-width: 30px;
+                text-align: center;
+            `;
+            
+            connectionsSliderContainer.appendChild(connectionsSlider);
+            connectionsSliderContainer.appendChild(connectionsValue);
+            connectionsFilterGroup.appendChild(connectionsLabel);
+            connectionsFilterGroup.appendChild(connectionsSliderContainer);
+            
+            // Add event listeners immediately after sliders are created
+            console.log('Adding event listeners to sliders');
+            
+            strengthSlider.addEventListener('input', function(event) {
+                const newValue = parseFloat(event.currentTarget.value);
+                minStrength = newValue;
+                
+                const strengthValue = document.getElementById('connection-strength-value');
+                if (strengthValue) strengthValue.textContent = newValue;
+                
+                console.log('Strength slider changed to:', newValue);
+                console.log('Updated state minStrength:', minStrength);
+                console.log('Calling debouncedApplyFilters...');
+                window.debouncedApplyFilters();
+            });
+            
+            connectionsSlider.addEventListener('input', function(event) {
+                const newValue = parseInt(event.currentTarget.value);
+                minConnections = newValue;
+                
+                const connectionsValue = document.getElementById('connections-value');
+                if (connectionsValue) connectionsValue.textContent = newValue;
+                
+                console.log('Connections slider changed to:', newValue);
+                console.log('Updated state minConnections:', minConnections);
+                console.log('Calling debouncedApplyFilters...');
+                window.debouncedApplyFilters();
+            });
+            
+            console.log('Event listeners added successfully');
+            
+            // Legend
+            const legend = document.createElement('div');
+            legend.style.cssText = `
+                font-size: 0.85em;
+                color: #ffffff;
+                font-style: italic;
+                margin-top: 10px;
+                padding: 10px;
+                background: #000000;
+                border-radius: 5px;
+                border-left: 3px solid #ffffff;
+            `;
+            legend.innerHTML = 'Simple filtering: Min Link Weight 3 = show links with weight ≥ 3, Min Connections 5 = show nodes with ≥ 5 connections. Lower values show more, higher values show less.';
+            
+
+            
+            filterRow.appendChild(strengthFilterGroup);
+            filterRow.appendChild(connectionsFilterGroup);
+            filterContainer.appendChild(filterRow);
+            filterContainer.appendChild(legend);
+            
+
+            
             // Network container with integrated layout
             const networkContainer = document.createElement('div');
             networkContainer.id = 'network-container';
             networkContainer.style.cssText = `
                 flex: 1;
                 min-height: 600px;
-                background: #f8f9fa;
+                background: #000000;
                 border-radius: 10px;
                 position: relative;
                 overflow: hidden;
@@ -1915,9 +2318,13 @@
             
             modalContent.appendChild(closeBtn);
             modalContent.appendChild(titleContainer);
+            modalContent.appendChild(filterContainer);
             modalContent.appendChild(networkContainer);
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
+            
+            // Add event listeners after modal is created
+
             
             // Create interactive network visualization
             console.log('About to create network visualization...');
@@ -2010,6 +2417,57 @@
             console.log('Processed nodes:', nodes);
             console.log('Processed links:', links);
             
+            // Store nodes and links for filtering
+            window.currentNodes = nodes;
+            window.currentLinks = links;
+            
+            console.log('Stored nodes for filtering:', window.currentNodes.length);
+            console.log('Stored links for filtering:', window.currentLinks.length);
+            
+            // Update slider ranges based on actual data
+            // Calculate connection counts for each node
+            const nodeConnections = {};
+            nodes.forEach(node => {
+                const connections = links.filter(link => {
+                    const sourceId = link.source.id || link.source;
+                    const targetId = link.target.id || link.target;
+                    return sourceId === node.id || targetId === node.id;
+                }).length;
+                nodeConnections[node.id] = connections;
+            });
+            
+            const maxConnections = Math.max(...Object.values(nodeConnections));
+            const minConnections = Math.min(...Object.values(nodeConnections));
+            
+            console.log(`Data ranges - Connections: min=${minConnections}, max=${maxConnections}`);
+            
+            // Update Connections slider (actual range)
+            const connectionsSlider = document.getElementById('connections-slider');
+            if (connectionsSlider) {
+                connectionsSlider.min = minConnections.toString();
+                connectionsSlider.max = maxConnections.toString();
+                connectionsSlider.value = minConnections.toString();
+                console.log(`Updated connections slider: min=${minConnections}, max=${maxConnections}, value=${minConnections}`);
+                
+                const connectionsValue = document.getElementById('connections-value');
+                if (connectionsValue) connectionsValue.textContent = minConnections.toString();
+            }
+            
+            // Update Link Weight slider (1-5 scale, already set)
+            const strengthSlider = document.getElementById('connection-strength-slider');
+            if (strengthSlider) {
+                strengthSlider.min = '1';
+                strengthSlider.max = '5';
+                strengthSlider.value = '1';
+                console.log(`Updated link weight slider: min=1, max=5, value=1`);
+                
+                const strengthValue = document.getElementById('connection-strength-value');
+                if (strengthValue) strengthValue.textContent = '1';
+            }
+            
+            // Don't apply initial filters - show everything normally
+            // Filters will only be applied when user moves the sliders
+            
             if (nodes.length === 0) {
                 container.innerHTML = `
                     <div style="padding: 20px; text-align: center; color: #666;">
@@ -2025,7 +2483,7 @@
                 .append('svg')
                 .attr('width', '100%')
                 .attr('height', '100%')
-                .style('background', '#f8f9fa')
+                .style('background', '#000000')
                 .style('border-radius', '10px');
             
             // Get container dimensions
@@ -2036,12 +2494,12 @@
             
             // Create force simulation with better parameters for clearer visualization
             const simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(120))
-                .force('charge', d3.forceManyBody().strength(-300))
+                .force('link', d3.forceLink(links).id(d => d.id).distance(200))
+                .force('charge', d3.forceManyBody().strength(-800))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(40))
-                .force('x', d3.forceX(width / 2).strength(0.05))
-                .force('y', d3.forceY(height / 2).strength(0.05));
+                .force('collision', d3.forceCollide().radius(60))
+                .force('x', d3.forceX(width / 2).strength(0.02))
+                .force('y', d3.forceY(height / 2).strength(0.02));
             
             // Create links with clearer styling
             const link = svg.append('g')
@@ -2058,16 +2516,13 @@
                 .selectAll('circle')
                 .data(nodes)
                 .enter().append('circle')
-                .attr('r', d => Math.max(15, Math.sqrt(d.connections) * 6))
-                .attr('fill', d => {
-                    console.log(`Setting color for node "${d.name}" with ${d.connections} connections`);
-                    return getNodeColor(d.connections);
-                })
-                .attr('stroke', '#ffffff')
-                .attr('stroke-width', 2)
+                .attr('r', d => Math.max(20, Math.sqrt(d.connections) * 8))
+                .attr('fill', '#ffffff')
+                .attr('stroke', '#000000')
+                .attr('stroke-width', 3)
                 .style('cursor', 'pointer')
                 .style('transition', 'all 0.3s ease')
-                .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))')
+                .style('filter', 'drop-shadow(0 2px 4px rgba(255,255,255,0.3))')
                 .on('mouseover', function(event, d) {
                     console.log('Mouse over node:', d.name);
                     
@@ -2128,9 +2583,9 @@
                 .text(d => d.name)
                 .attr('text-anchor', 'middle')
                 .attr('dy', '.35em')
-                .attr('font-size', '12px')
+                .attr('font-size', '14px')
                 .attr('font-weight', '600')
-                .attr('fill', '#2c3e50')
+                .attr('fill', '#000000')
                 .style('pointer-events', 'none')
                 .style('text-shadow', '0 1px 2px rgba(255,255,255,0.9)')
                 .style('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif');
@@ -2193,6 +2648,90 @@
             }
             
             console.log('D3.js network visualization created successfully');
+            
+            // Store D3 elements globally so updateGraphVisibility can access them
+            window.d3Elements = { node, link, label, simulation };
+            console.log('D3 elements stored globally:', Object.keys(window.d3Elements));
+            
+            // Show the full graph initially (no filtering)
+            console.log('Showing full graph initially...');
+            if (window.updateGraphVisibility) {
+                window.updateGraphVisibility(null, null); // This will show everything
+            }
+            
+            // Add filter update function
+            window.updateGraphVisibility = function(visibleNodes, visibleLinks) {
+                console.log('Updating graph visibility:', { visibleNodes: visibleNodes.length, visibleLinks: visibleLinks.length });
+                
+                // Special case: if both parameters are null, show everything (reset state)
+                if (visibleNodes === null && visibleLinks === null) {
+                    console.log('Reset state - showing all nodes and links');
+                    node.style('display', 'block');
+                    link.style('display', 'block');
+                    label.style('display', 'block');
+                    
+                    // Update statistics to show total counts
+                    const nodeCountElement = document.getElementById('node-count');
+                    const linkCountElement = document.getElementById('link-count');
+                    const termCountElement = document.getElementById('term-count');
+                    
+                    if (nodeCountElement) nodeCountElement.textContent = window.currentNodes.length;
+                    if (linkCountElement) nodeCountElement.textContent = window.currentLinks.length;
+                    if (termCountElement) termCountElement.textContent = window.currentNodes.length;
+                    return;
+                }
+                
+                // If no visible nodes or links provided, hide everything (filters too restrictive)
+                if (!visibleNodes || visibleNodes.length === 0 || !visibleLinks || visibleLinks.length === 0) {
+                    console.log('No nodes/links match current filters - hiding everything');
+                    node.style('display', 'none');
+                    link.style('display', 'none');
+                    label.style('display', 'none');
+                    
+                    // Update statistics to show total counts
+                    const nodeCountElement = document.getElementById('node-count');
+                    const linkCountElement = document.getElementById('link-count');
+                    const termCountElement = document.getElementById('term-count');
+                    
+                    if (nodeCountElement) nodeCountElement.textContent = '0';
+                    if (linkCountElement) linkCountElement.textContent = '0';
+                    if (termCountElement) termCountElement.textContent = '0';
+                    return;
+                }
+                
+                const nodeIds = new Set(visibleNodes.map(n => n.id));
+                const visibleLinkIds = new Set();
+                
+                // Build set of visible link IDs
+                visibleLinks.forEach(l => {
+                    const sourceId = l.source.id || l.source;
+                    const targetId = l.target.id || l.target;
+                    visibleLinkIds.add(`${sourceId}-${targetId}`);
+                });
+                
+                // Update node visibility - completely hide/show nodes
+                node.style('display', d => nodeIds.has(d.id) ? 'block' : 'none');
+                
+                // Update link visibility - completely hide/show links
+                link.style('display', d => {
+                    const sourceId = d.source.id || d.source;
+                    const targetId = d.target.id || d.target;
+                    const linkId = `${sourceId}-${targetId}`;
+                    return visibleLinkIds.has(linkId) ? 'block' : 'none';
+                });
+                
+                // Update label visibility - completely hide/show labels
+                label.style('display', d => nodeIds.has(d.id) ? 'block' : 'none');
+                
+                // Update statistics
+                const nodeCountElement = document.getElementById('node-count');
+                const linkCountElement = document.getElementById('link-count');
+                const termCountElement = document.getElementById('term-count');
+                
+                if (nodeCountElement) nodeCountElement.textContent = visibleNodes.length;
+                if (linkCountElement) linkCountElement.textContent = visibleLinks.length;
+                if (termCountElement) termCountElement.textContent = visibleNodes.length;
+            };
         }
         
         // Fallback visualization if D3.js fails
@@ -2464,28 +3003,28 @@
             }
             
             let content = `
-                <div style="height: 100%; overflow-y: auto; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); text-align: center;">
+                <div style="height: 100%; overflow-y: auto; background: #000000; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <div style="background: #ffffff; color: #000000; padding: 25px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(255, 255, 255, 0.3); text-align: center;">
                         <h2 style="margin: 0 0 15px 0; font-size: 2.2em; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${node.name.toUpperCase()}</h2>
                         <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
                             <div style="text-align: center;">
-                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${node.connections}</div>
-                                <div style="font-size: 0.9em; opacity: 0.9;">Connections</div>
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px; color: #000000;">${node.connections}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9; color: #000000;">Connections</div>
                             </div>
                             <div style="text-align: center;">
-                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${node.totalWeight}</div>
-                                <div style="font-size: 0.9em; opacity: 0.9;">Total Weight</div>
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px; color: #000000;">${node.totalWeight}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9; color: #000000;">Total Weight</div>
                             </div>
                             <div style="text-align: center;">
-                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${reviewsContainingKeyword.length}</div>
-                                <div style="font-size: 0.9em; opacity: 0.9;">Reviews Found</div>
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px; color: #000000;">${reviewsContainingKeyword.length}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9; color: #000000;">Reviews Found</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                        <h3 style="margin: 0 0 20px 0; color: #333; display: flex; align-items: center; font-size: 1.4em; font-weight: 600;">
-                            <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; margin-right: 12px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">${reviewsContainingKeyword.length}</span>
+                    <div style="background: #000000; padding: 20px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(255,255,255,0.1); border: 1px solid #ffffff;">
+                        <h3 style="margin: 0 0 20px 0; color: #ffffff; display: flex; align-items: center; font-size: 1.4em; font-weight: 600;">
+                            <span style="background: #ffffff; color: #000000; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; margin-right: 12px; box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);">${reviewsContainingKeyword.length}</span>
                             Reviews Containing "${node.name}"
                         </h3>
             `;
@@ -2511,22 +3050,22 @@
                 const highlightedSentence = highlightKeyword(sentenceWithKeyword, keyword);
                 
                 content += `
-                    <div id="review-${displayIndex}" style="margin-bottom: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; transition: all 0.3s ease; border: 1px solid #e8e8e8;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px;">
+                    <div id="review-${displayIndex}" style="margin-bottom: 25px; background: #000000; border-radius: 12px; box-shadow: 0 4px 20px rgba(255,255,255,0.08); overflow: hidden; transition: all 0.3s ease; border: 1px solid #ffffff;">
+                        <div style="background: #ffffff; color: #000000; padding: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="font-weight: 600; font-size: 1.1em;">${review.reviewer_name || review.reviewer || 'Anonymous'}</div>
-                                <div style="font-size: 0.9em; opacity: 0.9;">${formatDate(review.review_date || review.date || 'Unknown date')}</div>
+                                <div style="font-weight: 600; font-size: 1.1em; color: #000000;">${review.reviewer_name || review.reviewer || 'Anonymous'}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9; color: #000000;">${formatDate(review.review_date || review.date || 'Unknown date')}</div>
                             </div>
                         </div>
                         
-                        <div id="sentence-${displayIndex}" style="padding: 20px;">
+                        <div id="sentence-${displayIndex}" style="padding: 20px; background: #000000;">
                             <!-- Show rating if available -->
                             ${review.review_rating && review.review_rating !== 'Rating not available' ? `
                                 <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
                                     <div style="display: flex; align-items: center;">
                                         ${generateStarRating(review.review_rating)}
                                     </div>
-                                    <span style="font-size: 0.9em; color: #666; font-weight: 500;">
+                                    <span style="font-size: 0.9em; color: #ffffff; font-weight: 500;">
                                         ${typeof review.review_rating === 'number' ? `${review.review_rating}/5 stars` : review.review_rating}
                                     </span>
                                 </div>
@@ -2534,24 +3073,24 @@
                             
                             <!-- Show review title if available -->
                             ${review.review_title ? `
-                                <div style="margin-bottom: 15px; background: #e3f2fd; padding: 12px; border-radius: 8px; border-left: 4px solid #2196f3;">
-                                    <h4 style="margin: 0; color: #1976d2; font-size: 1.1em; font-weight: 600;">${review.review_title}</h4>
+                                <div style="margin-bottom: 15px; background: #ffffff; padding: 12px; border-radius: 8px; border-left: 4px solid #ffffff;">
+                                    <h4 style="margin: 0; color: #000000; font-size: 1.1em; font-weight: 600;">${review.review_title}</h4>
                                 </div>
                             ` : ''}
                             
                             <!-- Show the sentence containing the keyword -->
-                            <p style="margin: 0 0 15px 0; font-size: 1em; color: #333; line-height: 1.6; font-style: italic; background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <p style="margin: 0 0 15px 0; font-size: 1em; color: #ffffff; line-height: 1.6; font-style: italic; background: #333333; padding: 15px; border-radius: 8px; border-left: 4px solid #ffffff;">
                                 <strong>Sentence with "${node.name}":</strong><br>
                                 ${highlightedSentence}
                             </p>
                             
                             <button class="show-full-btn" onclick="toggleReviewDisplay(${actualIndex}, '${keyword}')" 
-                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9em; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); font-weight: 500;">
+                                    style="background: #ffffff; color: #000000; border: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9em; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3); font-weight: 500;">
                                 Show Full Review
                             </button>
                         </div>
                         
-                        <div id="full-review-${displayIndex}" style="display: none; margin: 0 20px 20px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
+                        <div id="full-review-${displayIndex}" style="display: none; margin: 0 20px 20px 20px; background: #000000; border-radius: 8px; box-shadow: 0 2px 10px rgba(255,255,255,0.1); overflow: hidden; border: 1px solid #ffffff;">
                             <!-- Full review content will be loaded here -->
                         </div>
                     </div>
@@ -3138,7 +3677,7 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.8);
+                background: #000000;
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -3147,7 +3686,7 @@
             
             const modalContent = document.createElement('div');
             modalContent.style.cssText = `
-                background: white;
+                background: #000000;
                 border-radius: 15px;
                 padding: 30px;
                 width: 95vw;
@@ -3169,7 +3708,7 @@
                 border: none;
                 font-size: 24px;
                 cursor: pointer;
-                color: #666;
+                color: #ffffff;
                 z-index: 1001;
             `;
             closeBtn.onclick = () => document.body.removeChild(modal);
@@ -3179,7 +3718,7 @@
             title.textContent = 'Defect Visualization';
             title.style.cssText = `
                 margin: 0 0 20px 0;
-                color: #333;
+                color: #ffffff;
                 text-align: center;
                 font-size: 1.5em;
             `;
@@ -3189,7 +3728,7 @@
             mainContainer.style.cssText = `
                 flex: 1;
                 min-height: 600px;
-                background: #f8f9fa;
+                background: #000000;
                 border-radius: 10px;
                 position: relative;
                 overflow: hidden;
@@ -3267,9 +3806,9 @@
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: #f0f0f0;
+                    background: #333333;
                     border-radius: 8px;
-                    color: #666;
+                    color: #ffffff;
                     font-size: 1.2em;
                 `;
                 productImage.textContent = 'Product image not available';
@@ -3281,28 +3820,28 @@
             const defectPanel = document.createElement('div');
             defectPanel.style.cssText = `
                 flex: 1;
-                background: white;
-                border-left: 2px solid #eee;
+                background: #000000;
+                border-left: 2px solid #ffffff;
                 padding: 25px;
                 max-height: 100%;
                 overflow-y: auto;
                 display: block;
-                box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+                box-shadow: -4px 0 15px rgba(255,255,255,0.1);
             `;
             
             // Summary
             const summary = document.createElement('div');
             summary.style.cssText = `
-                background: #fff3cd;
-                border: 1px solid #ffeaa7;
+                background: #ffffff;
+                border: 1px solid #ffffff;
                 border-radius: 8px;
                 padding: 15px;
                 margin-bottom: 20px;
                 text-align: center;
             `;
             summary.innerHTML = `
-                <strong>${defectPairs.length} defect relationships detected</strong><br>
-                <small>Component-Condition pairs found in reviews</small>
+                <strong style="color: #000000;">${defectPairs.length} defect relationships detected</strong><br>
+                <small style="color: #000000;">Component-Condition pairs found in reviews</small>
             `;
             
             // Defect pairs visualization
@@ -3316,13 +3855,14 @@
             defectPairs.forEach((pair, index) => {
                 const defectCard = document.createElement('div');
                 defectCard.style.cssText = `
-                    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-                    color: white;
+                    background: #ffffff;
+                    color: #000000;
                     padding: 20px;
                     border-radius: 12px;
                     text-align: center;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    box-shadow: 0 4px 8px rgba(255,255,255,0.1);
                     position: relative;
+                    border: 1px solid #ffffff;
                 `;
                 
                 const defectNumber = document.createElement('div');
@@ -3330,7 +3870,8 @@
                     position: absolute;
                     top: 10px;
                     right: 15px;
-                    background: rgba(255,255,255,0.2);
+                    background: #000000;
+                    color: #ffffff;
                     border-radius: 50%;
                     width: 25px;
                     height: 25px;
@@ -3347,6 +3888,7 @@
                     font-size: 1.2em;
                     font-weight: bold;
                     margin-bottom: 10px;
+                    color: #000000;
                 `;
                 component.textContent = pair[0];
                 
@@ -3354,6 +3896,7 @@
                 arrow.style.cssText = `
                     font-size: 1.5em;
                     margin: 10px 0;
+                    color: #000000;
                 `;
                 arrow.textContent = '↓';
                 
@@ -3361,6 +3904,7 @@
                 condition.style.cssText = `
                     font-size: 1.1em;
                     opacity: 0.9;
+                    color: #000000;
                 `;
                 condition.textContent = pair[1];
                 
