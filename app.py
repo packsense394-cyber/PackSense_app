@@ -304,7 +304,7 @@ def demo():
             
             # Add all the required template variables with safe defaults
             'review_filters': {
-                'all': total,
+                'all': len(reviews_full),
                 'packaging': pack,
                 'positive': pos,
                 'negative': neg,
