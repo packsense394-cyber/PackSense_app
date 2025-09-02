@@ -3770,8 +3770,8 @@
                 padding: 20px;
             `;
             
-            const defectImageUrl = '{{ defect_image_url }}';
-            const baseImageUrl = '{{ base_image_url }}';
+            const defectImageUrl = {{ (defect_overlay_url or '') | tojson }};
+            const baseImageUrl = {{ (product_image_url or '') | tojson }};
             
             let productImage;
             if (defectImageUrl && defectImageUrl !== '/static/None/defects_overlay.png') {
