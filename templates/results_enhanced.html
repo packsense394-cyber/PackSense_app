@@ -1051,20 +1051,20 @@
             <!-- Review Filters -->
             <div class="sidebar-section">
                 <h3><i class="fas fa-filter"></i> Review Filters</h3>
-                <button class="review-filter active" data-filter="all">
-                    All Reviews <span class="filter-count">{{ review_filters.all_reviews }}</span>
+                <button class="review-filter active" data-filter="all" id="filter-all">
+                    All Reviews <span class="filter-count" id="count-all">{{ kpi.total|default(review_filters.all_reviews) }}</span>
                 </button>
-                <button class="review-filter" data-filter="packaging">
-                    Packaging Related <span class="filter-count">{{ review_filters.packaging_reviews }}</span>
+                <button class="review-filter" data-filter="packaging" id="filter-pack">
+                    Packaging Related <span class="filter-count" id="count-pack">{{ kpi.packaging_related|default(review_filters.packaging_reviews) }}</span>
                 </button>
-                <button class="review-filter" data-filter="positive">
-                    Positive <span class="filter-count">{{ review_filters.positive_reviews }}</span>
+                <button class="review-filter" data-filter="positive" id="filter-pos">
+                    Positive <span class="filter-count" id="count-pos">{{ kpi.positive|default(review_filters.positive_reviews) }}</span>
                 </button>
-                <button class="review-filter" data-filter="neutral">
-                    Neutral <span class="filter-count">{{ review_filters.neutral_reviews }}</span>
+                <button class="review-filter" data-filter="neutral" id="filter-neu">
+                    Neutral <span class="filter-count" id="count-neu">{{ kpi.neutral|default(review_filters.neutral_reviews) }}</span>
                 </button>
-                <button class="review-filter" data-filter="negative">
-                    Negative <span class="filter-count">{{ review_filters.negative_reviews }}</span>
+                <button class="review-filter" data-filter="negative" id="filter-neg">
+                    Negative <span class="filter-count" id="count-neg">{{ kpi.negative|default(review_filters.negative_reviews) }}</span>
                 </button>
             </div>
 
@@ -1130,7 +1130,7 @@
             <div class="metrics-grid">
                 <div class="metric-card">
                     <span class="metric-icon">📦</span>
-                    <div class="metric-value">{{ total_reviews }}</div>
+                    <div class="metric-value" id="kpi-total">{{ kpi.total|default(total_reviews) }}</div>
                     <div class="metric-label">Total Reviews</div>
                 </div>
 
@@ -1147,25 +1147,25 @@
 
                 <div class="metric-card">
                     <span class="metric-icon">😊</span>
-                    <div class="metric-value">{{ positive_count }}</div>
+                    <div class="metric-value" id="kpi-positive">{{ kpi.positive|default(positive_count) }}</div>
                     <div class="metric-label">Positive Reviews</div>
                 </div>
 
                 <div class="metric-card">
                     <span class="metric-icon">😐</span>
-                    <div class="metric-value">{{ neutral_count }}</div>
+                    <div class="metric-value" id="kpi-neutral">{{ kpi.neutral|default(neutral_count) }}</div>
                     <div class="metric-label">Neutral Reviews</div>
                 </div>
 
                 <div class="metric-card">
                     <span class="metric-icon">😞</span>
-                    <div class="metric-value">{{ negative_count }}</div>
+                    <div class="metric-value" id="kpi-negative">{{ kpi.negative|default(negative_count) }}</div>
                     <div class="metric-label">Negative Reviews</div>
                 </div>
 
                 <div class="metric-card">
                     <span class="metric-icon">❌</span>
-                    <div class="metric-value">{{ defect_pairs|length }}</div>
+                    <div class="metric-value" id="kpi-defects">{{ kpi.defects|default(defect_pairs|length) }}</div>
                     <div class="metric-label">Defects Detected</div>
                 </div>
             </div>
@@ -4150,6 +4150,51 @@
         }
     </script>
     
+    <!-- Client-side fallback for missing counts -->
+    <script>
+        // Reviews from server; default to empty array
+        window.allReviews = {{ reviews | default([]) | tojson }};
+
+        function computeCounts(reviews) {
+            const norm = s => String(s ?? '').trim().toLowerCase();
+            let pos=0, neu=0, neg=0, pack=0;
+            for (const r of reviews) {
+                const sent = norm(r.sentiment);
+                if (sent.startsWith('pos')) pos++;
+                else if (sent.startsWith('neu')) neu++;
+                else if (sent.startsWith('neg')) neg++;
+                const pr = r.is_packaging_related;
+                if (pr === true || norm(pr)==='true' || pr === 1) pack++;
+            }
+            return { total: reviews.length, positive: pos, neutral: neu, negative: neg, packaging_related: pack };
+        }
+
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(val);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const c = computeCounts(window.allReviews || []);
+
+            // KPIs
+            setText('kpi-total', c.total);
+            setText('kpi-positive', c.positive);
+            setText('kpi-neutral', c.neutral);
+            setText('kpi-negative', c.negative);
+            // keep server defects if present; if missing, leave as-is
+            if (!document.getElementById('kpi-defects')?.textContent?.trim()) {
+                setText('kpi-defects', 0);
+            }
+
+            // Filter badges
+            setText('count-all', c.total);
+            setText('count-pack', c.packaging_related);
+            setText('count-pos', c.positive);
+            setText('count-neu', c.neutral);
+            setText('count-neg', c.negative);
+        });
+    </script>
 
 </body>
 </html> 

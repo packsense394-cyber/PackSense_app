@@ -244,6 +244,44 @@ def demo():
         product_image_url = url_for('static', filename=product_image_rel) if os.path.exists(os.path.join('static', product_image_rel)) else None
         defect_overlay_url = url_for('static', filename=defects_overlay_rel) if os.path.exists(os.path.join('static', defects_overlay_rel)) else None
         
+        # Helper functions for robust data processing
+        def _norm_sent(x):
+            return str(x or "").strip().lower()
+        
+        def _as_bool(x):
+            if isinstance(x, bool): 
+                return x
+            s = _norm_sent(x)
+            return s in {"true", "1", "yes", "y"}
+        
+        # Compute KPI counts from actual review data
+        total = len(cleaned_reviews)
+        pos = neu = neg = pack = 0
+        for r in cleaned_reviews:
+            sent = _norm_sent(r.get("sentiment"))
+            if sent.startswith("pos"): 
+                pos += 1
+            elif sent.startswith("neu"): 
+                neu += 1
+            elif sent.startswith("neg"): 
+                neg += 1
+            # packaging flag may be bool or string
+            if _as_bool(r.get("is_packaging_related")):
+                pack += 1
+        
+        # defects: use whatever we have, else 0
+        defects = len(sample_defect_pairs) or 0
+        
+        # Create KPI object for template
+        kpi = {
+            "total": total,
+            "positive": pos,
+            "neutral": neu,
+            "negative": neg,
+            "defects": defects,
+            "packaging_related": pack,
+        }
+        
         # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
@@ -252,22 +290,23 @@ def demo():
             'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
             'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
             'sentiment_distribution': {
-                'positive': len([r for r in cleaned_reviews if r.get('sentiment') == 'positive']),
-                'negative': len([r for r in cleaned_reviews if r.get('sentiment') == 'negative']),
-                'neutral': len([r for r in cleaned_reviews if r.get('sentiment') == 'neutral'])
+                'positive': pos,
+                'negative': neg,
+                'neutral': neu
             },
             'reviews': cleaned_reviews,
             'is_demo': True,
             'product_image_url': product_image_url,
             'defect_overlay_url': defect_overlay_url,
+            'kpi': kpi,  # Add KPI object for template
             
             # Add all the required template variables with safe defaults
             'review_filters': {
-                'all': int(total_reviews_count),
-                'packaging': len([r for r in cleaned_reviews if r.get('is_packaging_related', False)]),
-                'positive': len([r for r in cleaned_reviews if r.get('sentiment') == 'positive']),
-                'negative': len([r for r in cleaned_reviews if r.get('sentiment') == 'negative']),
-                'neutral': len([r for r in cleaned_reviews if r.get('sentiment') == 'neutral'])
+                'all': total,
+                'packaging': pack,
+                'positive': pos,
+                'negative': neg,
+                'neutral': neu
             },
             'packaging_freq': sample_packaging_freq,
             'component_freq': sample_component_freq,
