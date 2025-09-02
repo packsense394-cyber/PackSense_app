@@ -325,8 +325,8 @@ def demo():
             'defect_pairs': sample_defect_pairs
         }
         
-        # Render using the full results_enhanced.html template
-        return render_template('results_enhanced.html', **demo_data)
+        # Render using the demo-specific template with KPI fixes
+        return render_template('results_enhanced_demo.html', **demo_data)
         
     except Exception as e:
         print(f"Error loading demo data: {e}")
