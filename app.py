@@ -154,7 +154,41 @@ def demo():
                         cleaned_review[key] = str(value) if value is not None else ""
                 cleaned_reviews.append(cleaned_review)
         
-        # Create properly formatted data for the template with all numeric values
+        # Generate sample packaging frequency data for demo
+        sample_packaging_freq = {
+            'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
+            'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
+            'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
+        }
+        
+        # Generate sample component frequency data
+        sample_component_freq = {
+            'bottle': 35, 'cap': 25, 'label': 20, 'seal': 15, 'handle': 10
+        }
+        
+        # Generate sample condition frequency data
+        sample_condition_freq = {
+            'good': 180, 'excellent': 120, 'poor': 15, 'damaged': 8, 'broken': 5
+        }
+        
+        # Generate sample enhanced metrics
+        sample_enhanced_metrics = {
+            'packaging_satisfaction_score': 7.2,
+            'defect_rate': 0.15,
+            'quality_score': 8.1,
+            'customer_satisfaction': 7.8
+        }
+        
+        # Generate sample top keywords
+        sample_top_keywords = [
+            {'word': 'bottle', 'count': 45, 'sentiment': 'neutral'},
+            {'word': 'container', 'count': 32, 'sentiment': 'positive'},
+            {'word': 'package', 'count': 28, 'sentiment': 'neutral'},
+            {'word': 'box', 'count': 25, 'sentiment': 'positive'},
+            {'word': 'cap', 'count': 22, 'sentiment': 'neutral'}
+        ]
+        
+        # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
             'product_description_url': 'https://www.amazon.com/dp/B08N5WRWNW',
@@ -177,15 +211,15 @@ def demo():
                 'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
                 'neutral': int(recursive_data.get('sentiment_breakdown', {}).get('neutral', 0))
             },
-            'packaging_freq': recursive_data.get('packaging_freq', {}),
-            'component_freq': recursive_data.get('component_freq', {}),
-            'condition_freq': recursive_data.get('condition_freq', {}),
-            'keyword_sentence_map': recursive_data.get('keyword_sentence_map', {}),
-            'defect_coords_map': recursive_data.get('defect_coords_map', {}),
-            'enhanced_metrics': recursive_data.get('enhanced_metrics', {}),
-            'top_keywords': recursive_data.get('top_keywords', []),
-            'review_timeline': recursive_data.get('review_timeline', []),
-            'defect_summary': recursive_data.get('defect_summary', {})
+            'packaging_freq': sample_packaging_freq,
+            'component_freq': sample_component_freq,
+            'condition_freq': sample_condition_freq,
+            'keyword_sentence_map': {},
+            'defect_coords_map': {},
+            'enhanced_metrics': sample_enhanced_metrics,
+            'top_keywords': sample_top_keywords,
+            'review_timeline': [],
+            'defect_summary': {'total_defects': 15, 'critical_defects': 3, 'minor_defects': 12}
         }
         
         # Render using the full results_enhanced.html template
