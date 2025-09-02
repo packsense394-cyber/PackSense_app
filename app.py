@@ -128,31 +128,49 @@ def demo():
         with open(recursive_analysis_path, 'r', encoding='utf-8') as f:
             recursive_data = json.load(f)
         
-        # Extract reviews safely
+        # Extract reviews safely - limit to first 50 reviews to avoid data issues
         reviews = []
         try:
             if 'initial_reviews' in recursive_data and 'reviews' in recursive_data['initial_reviews']:
-                reviews = recursive_data['initial_reviews']['reviews']
-            elif 'reviews' in recursive_data:
-                reviews = recursive_data['reviews']
-        except:
+                all_reviews = recursive_data['initial_reviews']['reviews']
+                # Take only first 50 reviews and ensure they have proper structure
+                for review in all_reviews[:50]:
+                    if isinstance(review, dict) and 'review_text' in review:
+                        # Clean the review data
+                        clean_review = {
+                            'review_title': str(review.get('review_title', '')),
+                            'review_text': str(review.get('review_text', '')),
+                            'reviewer_name': str(review.get('reviewer_name', '')),
+                            'review_date': str(review.get('review_date', '')),
+                            'rating': str(review.get('rating', '')),
+                            'verified': bool(review.get('verified', False)),
+                            'sentiment': str(review.get('sentiment', 'neutral')),
+                            'is_packaging_related': bool(review.get('is_packaging_related', False))
+                        }
+                        reviews.append(clean_review)
+        except Exception as e:
+            print(f"Error processing reviews: {e}")
             reviews = []
         
-        # Create completely safe demo data with all required variables
+        # Create safe demo data
         demo_data = {
             'product_name': "Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)",
             'product_image': f"/static/{demo_folder}/product.jpg",
             'reviews': reviews,
             'cooccurrence_data': {},
-            'packaging_reviews': [],
-            'sentiment_summary': {},
+            'packaging_reviews': reviews[:10],  # Use first 10 as packaging reviews
+            'sentiment_summary': {
+                'positive': len([r for r in reviews if r.get('sentiment') == 'positive']),
+                'negative': len([r for r in reviews if r.get('sentiment') == 'negative']),
+                'neutral': len([r for r in reviews if r.get('sentiment') == 'neutral'])
+            },
             'defect_analysis': {},
             'is_demo': True,
             'demo_folder': demo_folder,
             'review_filters': ['all', 'positive', 'negative', 'packaging'],
             'product_description_url': '#',
             'total_reviews': len(reviews),
-            'packaging_review_count': 0,
+            'packaging_review_count': len(reviews[:10]),
             'packaging_freq': {},
             'component_freq': {},
             'condition_freq': {},
@@ -160,7 +178,11 @@ def demo():
             'defect_coords_map': {},
             'enhanced_metrics': {},
             'top_keywords': [],
-            'sentiment_distribution': {},
+            'sentiment_distribution': {
+                'positive': len([r for r in reviews if r.get('sentiment') == 'positive']),
+                'negative': len([r for r in reviews if r.get('sentiment') == 'negative']),
+                'neutral': len([r for r in reviews if r.get('sentiment') == 'neutral'])
+            },
             'review_timeline': [],
             'defect_summary': {}
         }
