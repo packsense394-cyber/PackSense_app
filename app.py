@@ -137,7 +137,10 @@ def demo():
             recursive_data = json.load(f)
         
         # Process the demo data to match the expected template format
-        reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
+        # Try to get all reviews first, fallback to initial_reviews
+        reviews = recursive_data.get('all_reviews', [])
+        if not reviews:
+            reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
         total_reviews_count = recursive_data.get('total_reviews_extracted', len(reviews))
         
         # Clean and convert review data to proper types
@@ -257,6 +260,10 @@ def demo():
         # Compute KPI counts from FULL review data (no slicing)
         reviews_full = cleaned_reviews  # FULL LIST – no slicing here
         
+        # Debug: Print review counts to understand the data
+        print(f"Demo Debug - Total reviews loaded: {len(reviews_full)}")
+        print(f"Demo Debug - Total reviews extracted: {total_reviews_count}")
+        
         def _norm(s): 
             return str(s or "").strip().lower()
         
@@ -269,6 +276,9 @@ def demo():
         neu = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neu"))
         neg = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neg"))
         pack = sum(1 for r in reviews_full if _truthy(r.get("is_packaging_related")))
+        
+        # Debug: Print sentiment counts
+        print(f"Demo Debug - Sentiment counts: pos={pos}, neu={neu}, neg={neg}, pack={pack}")
         
         # Defects: use sample defect pairs for now
         defects = len(sample_defect_pairs) if sample_defect_pairs else 0
