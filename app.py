@@ -153,7 +153,12 @@ def demo():
             'review_filters': ['all', 'positive', 'negative', 'packaging'],
             'product_description_url': '#',
             'total_reviews': len(reviews),
-            'packaging_review_count': len(packaging_reviews)
+            'packaging_review_count': len(packaging_reviews),
+            'packaging_freq': recursive_data.get('packaging_freq', {}),
+            'component_freq': recursive_data.get('component_freq', {}),
+            'condition_freq': recursive_data.get('condition_freq', {}),
+            'keyword_sentence_map': recursive_data.get('keyword_sentence_map', {}),
+            'defect_coords_map': recursive_data.get('defect_coords_map', {})
         }
         
         return render_template("results_enhanced.html", **demo_data)
