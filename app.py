@@ -270,21 +270,8 @@ def demo():
         neg = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neg"))
         pack = sum(1 for r in reviews_full if _truthy(r.get("is_packaging_related")))
         
-        # Defects: prefer detailed counts if available; otherwise fall back to number of keys/pairs
-        defect_pairs = sample_defect_pairs
-        defect_summary = demo_data.get("defect_summary", {})
-        if isinstance(defect_summary, dict) and defect_summary:
-            # sum nested counts if they're numbers; else count leaves
-            def _sum_counts(obj):
-                if isinstance(obj, dict):
-                    return sum(_sum_counts(v) for v in obj.values())
-                try:
-                    return int(obj)
-                except Exception:
-                    return 0
-            defects = _sum_counts(defect_summary)
-        else:
-            defects = len(defect_pairs) if defect_pairs else int(demo_data.get("defects_detected") or 0)
+        # Defects: use sample defect pairs for now
+        defects = len(sample_defect_pairs) if sample_defect_pairs else 0
         
         # Create KPI object for template
         kpi = {
