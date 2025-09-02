@@ -108,6 +108,56 @@ def intro():
     """Introduction page"""
     return render_template("intro.html")
 
+@app.route("/demo")
+def demo():
+    """Demo mode - shows pre-scraped data without requiring scraping"""
+    # Use the Tide Ultra Oxi Boost data as demo
+    demo_folder = "Tide_Ultra_Oxi_Boost_Liquid_Laundry_Detergent,_84_fl_oz,_59_Loads,_Advanced_Stain_Remover,_Laundry_Detergent_Liquid_with_Extra_Oxi_Power_2025-09-02"
+    
+    # Check if demo data exists
+    demo_path = os.path.join("static", demo_folder)
+    if not os.path.exists(demo_path):
+        return "Demo data not found. Please ensure demo data is available.", 404
+    
+    # Load the recursive analysis data
+    recursive_analysis_path = os.path.join(demo_path, "recursive_analysis.json")
+    if not os.path.exists(recursive_analysis_path):
+        return "Demo analysis data not found.", 404
+    
+    try:
+        with open(recursive_analysis_path, 'r', encoding='utf-8') as f:
+            recursive_data = json.load(f)
+        
+        # Process the demo data the same way as real analysis
+        reviews = recursive_data.get('reviews', [])
+        cooccurrence_data = recursive_data.get('cooccurrence_data', {})
+        packaging_reviews = recursive_data.get('packaging_reviews', [])
+        sentiment_summary = recursive_data.get('sentiment_summary', {})
+        defect_analysis = recursive_data.get('defect_analysis', {})
+        
+        # Get product info
+        product_name = "Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)"
+        product_image = f"/static/{demo_folder}/product.jpg"
+        
+        # Add demo indicator to the data
+        demo_data = {
+            'product_name': product_name,
+            'product_image': product_image,
+            'reviews': reviews,
+            'cooccurrence_data': cooccurrence_data,
+            'packaging_reviews': packaging_reviews,
+            'sentiment_summary': sentiment_summary,
+            'defect_analysis': defect_analysis,
+            'is_demo': True,
+            'demo_folder': demo_folder
+        }
+        
+        return render_template("results_enhanced.html", **demo_data)
+        
+    except Exception as e:
+        print(f"Error loading demo data: {e}")
+        return f"Error loading demo data: {str(e)}", 500
+
 @app.route("/analyze", methods=["GET", "POST"])
 def index():
     """Main analysis route - now uses Recursive Review Extraction Strategy integrated into existing flow"""
