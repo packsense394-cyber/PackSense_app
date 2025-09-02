@@ -128,42 +128,38 @@ def demo():
         with open(recursive_analysis_path, 'r', encoding='utf-8') as f:
             recursive_data = json.load(f)
         
-        # Process the demo data the same way as real analysis
-        reviews = recursive_data.get('reviews', [])
-        cooccurrence_data = recursive_data.get('cooccurrence_data', {})
-        packaging_reviews = recursive_data.get('packaging_reviews', [])
-        sentiment_summary = recursive_data.get('sentiment_summary', {})
-        defect_analysis = recursive_data.get('defect_analysis', {})
+        # Extract reviews from the data structure
+        reviews = []
+        if 'initial_reviews' in recursive_data and 'reviews' in recursive_data['initial_reviews']:
+            reviews = recursive_data['initial_reviews']['reviews']
+        elif 'reviews' in recursive_data:
+            reviews = recursive_data['reviews']
         
-        # Get product info
-        product_name = "Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)"
-        product_image = f"/static/{demo_folder}/product.jpg"
-        
-        # Add demo indicator to the data
+        # Create basic demo data with safe defaults
         demo_data = {
-            'product_name': product_name,
-            'product_image': product_image,
+            'product_name': "Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)",
+            'product_image': f"/static/{demo_folder}/product.jpg",
             'reviews': reviews,
-            'cooccurrence_data': cooccurrence_data,
-            'packaging_reviews': packaging_reviews,
-            'sentiment_summary': sentiment_summary,
-            'defect_analysis': defect_analysis,
+            'cooccurrence_data': recursive_data.get('cooccurrence_data', {}),
+            'packaging_reviews': recursive_data.get('packaging_reviews', []),
+            'sentiment_summary': recursive_data.get('sentiment_summary', {}),
+            'defect_analysis': recursive_data.get('defect_analysis', {}),
             'is_demo': True,
             'demo_folder': demo_folder,
             'review_filters': ['all', 'positive', 'negative', 'packaging'],
             'product_description_url': '#',
             'total_reviews': len(reviews),
-            'packaging_review_count': len(packaging_reviews),
-            'packaging_freq': recursive_data.get('packaging_freq', {}),
-            'component_freq': recursive_data.get('component_freq', {}),
-            'condition_freq': recursive_data.get('condition_freq', {}),
-            'keyword_sentence_map': recursive_data.get('keyword_sentence_map', {}),
-            'defect_coords_map': recursive_data.get('defect_coords_map', {}),
-            'enhanced_metrics': recursive_data.get('enhanced_metrics', {}),
-            'top_keywords': recursive_data.get('top_keywords', []),
-            'sentiment_distribution': recursive_data.get('sentiment_distribution', {}),
-            'review_timeline': recursive_data.get('review_timeline', []),
-            'defect_summary': recursive_data.get('defect_summary', {})
+            'packaging_review_count': recursive_data.get('packaging_related_reviews', 0),
+            'packaging_freq': {},
+            'component_freq': {},
+            'condition_freq': {},
+            'keyword_sentence_map': {},
+            'defect_coords_map': {},
+            'enhanced_metrics': {},
+            'top_keywords': [],
+            'sentiment_distribution': recursive_data.get('sentiment_breakdown', {}),
+            'review_timeline': [],
+            'defect_summary': {}
         }
         
         return render_template("results_enhanced.html", **demo_data)
