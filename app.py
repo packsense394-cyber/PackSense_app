@@ -158,7 +158,12 @@ def demo():
             'component_freq': recursive_data.get('component_freq', {}),
             'condition_freq': recursive_data.get('condition_freq', {}),
             'keyword_sentence_map': recursive_data.get('keyword_sentence_map', {}),
-            'defect_coords_map': recursive_data.get('defect_coords_map', {})
+            'defect_coords_map': recursive_data.get('defect_coords_map', {}),
+            'enhanced_metrics': recursive_data.get('enhanced_metrics', {}),
+            'top_keywords': recursive_data.get('top_keywords', []),
+            'sentiment_distribution': recursive_data.get('sentiment_distribution', {}),
+            'review_timeline': recursive_data.get('review_timeline', []),
+            'defect_summary': recursive_data.get('defect_summary', {})
         }
         
         return render_template("results_enhanced.html", **demo_data)
