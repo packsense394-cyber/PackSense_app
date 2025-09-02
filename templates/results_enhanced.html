@@ -2494,22 +2494,22 @@
             
             // Create force simulation with better parameters for clearer visualization
             const simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(200))
-                .force('charge', d3.forceManyBody().strength(-800))
-                .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(60))
-                .force('x', d3.forceX(width / 2).strength(0.02))
-                .force('y', d3.forceY(height / 2).strength(0.02));
+                .force('link', d3.forceLink(links).id(d => d.id).distance(300).strength(0.1))
+                .force('charge', d3.forceManyBody().strength(-1200).distanceMax(400))
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.1))
+                .force('collision', d3.forceCollide().radius(80).strength(0.8))
+                .force('x', d3.forceX(width / 2).strength(0.01))
+                .force('y', d3.forceY(height / 2).strength(0.01));
             
             // Create links with clearer styling
             const link = svg.append('g')
                 .selectAll('line')
                 .data(links)
                 .enter().append('line')
-                .attr('stroke', '#4a90e2')
-                .attr('stroke-opacity', 0.8)
-                .attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5))
-                .style('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))');
+                .attr('stroke', '#C0C0C0')
+                .attr('stroke-opacity', 0.9)
+                .attr('stroke-width', d => Math.max(1.5, Math.sqrt(d.weight) * 1.8))
+                .style('filter', 'drop-shadow(0 1px 2px rgba(255,255,255,0.3))');
             
             // Create nodes with smaller, more consistent sizing
             const node = svg.append('g')
@@ -2551,7 +2551,7 @@
                     d3.select(this).attr('r', d => Math.max(15, Math.sqrt(d.connections) * 6));
                     
                     // Reset link opacity and width
-                    link.attr('stroke-opacity', 0.8).attr('stroke-width', d => Math.max(1, Math.sqrt(d.weight) * 1.5));
+                    link.attr('stroke-opacity', 0.9).attr('stroke-width', d => Math.max(1.5, Math.sqrt(d.weight) * 1.8));
                     
                     // Reset node opacity
                     node.attr('opacity', 1);
@@ -2590,12 +2590,14 @@
                 .style('text-shadow', '0 1px 2px rgba(255,255,255,0.9)')
                 .style('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif');
             
-            // Set initial positions to spread nodes out
+            // Set initial positions to spread nodes out in a larger circle
             nodes.forEach((node, i) => {
                 const angle = (i / nodes.length) * 2 * Math.PI;
-                const radius = Math.min(width, height) * 0.3;
-                node.x = width / 2 + radius * Math.cos(angle);
-                node.y = height / 2 + radius * Math.sin(angle);
+                const radius = Math.min(width, height) * 0.4;
+                // Add some randomness to prevent perfect circle clustering
+                const randomOffset = (Math.random() - 0.5) * 50;
+                node.x = width / 2 + (radius + randomOffset) * Math.cos(angle);
+                node.y = height / 2 + (radius + randomOffset) * Math.sin(angle);
             });
             
             // Update network statistics in info panel
