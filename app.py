@@ -191,19 +191,25 @@ def demo():
         # Generate sample keyword frequencies (same as packaging_freq for demo)
         sample_keyword_frequencies = sample_packaging_freq
         
-        # Generate sample co-occurrence data
+        # Generate sample co-occurrence data with proper structure
         sample_cooccurrence_data = {
             'nodes': [
-                {'id': 'bottle', 'group': 1, 'size': 45},
-                {'id': 'container', 'group': 1, 'size': 32},
-                {'id': 'package', 'group': 1, 'size': 28},
-                {'id': 'box', 'group': 1, 'size': 25},
-                {'id': 'cap', 'group': 1, 'size': 22}
+                {'id': 'bottle', 'group': 1, 'size': 45, 'name': 'bottle'},
+                {'id': 'container', 'group': 1, 'size': 32, 'name': 'container'},
+                {'id': 'package', 'group': 1, 'size': 28, 'name': 'package'},
+                {'id': 'box', 'group': 1, 'size': 25, 'name': 'box'},
+                {'id': 'cap', 'group': 1, 'size': 22, 'name': 'cap'},
+                {'id': 'lid', 'group': 1, 'size': 18, 'name': 'lid'},
+                {'id': 'plastic', 'group': 1, 'size': 15, 'name': 'plastic'},
+                {'id': 'seal', 'group': 1, 'size': 12, 'name': 'seal'}
             ],
             'links': [
-                {'source': 'bottle', 'target': 'container', 'weight': 15},
-                {'source': 'package', 'target': 'box', 'weight': 12},
-                {'source': 'bottle', 'target': 'cap', 'weight': 18}
+                {'source': 'bottle', 'target': 'container', 'weight': 15, 'value': 15},
+                {'source': 'package', 'target': 'box', 'weight': 12, 'value': 12},
+                {'source': 'bottle', 'target': 'cap', 'weight': 18, 'value': 18},
+                {'source': 'cap', 'target': 'lid', 'weight': 10, 'value': 10},
+                {'source': 'container', 'target': 'plastic', 'weight': 8, 'value': 8},
+                {'source': 'bottle', 'target': 'seal', 'weight': 6, 'value': 6}
             ]
         }
         
@@ -225,7 +231,7 @@ def demo():
         # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
-            'product_description_url': 'https://www.amazon.com/dp/B08N5WRWNW',
+            'product_description_url': '/demo-product',
             'total_reviews': int(len(cleaned_reviews)),
             'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
             'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
@@ -279,6 +285,70 @@ def demo():
         </body>
         </html>
         """
+
+@app.route("/demo-product")
+def demo_product():
+    """Demo product page for the Tide Ultra Oxi Boost"""
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Tide Ultra Oxi Boost - PackSense Demo</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }
+            .container { max-width: 1200px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .product-card { background: #222; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+            .product-image { width: 200px; height: 200px; background: #333; border-radius: 10px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
+            .back-btn { display: inline-block; background: #333; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📦 Tide Ultra Oxi Boost Liquid Laundry Detergent</h1>
+                <p>PackSense Demo Product Page</p>
+            </div>
+            
+            <div class="product-card">
+                <div class="product-image">
+                    <span style="font-size: 3em;">🧴</span>
+                </div>
+                <h2>Tide Ultra Oxi Boost Liquid Laundry Detergent</h2>
+                <p><strong>Size:</strong> 84 fl oz (59 Loads)</p>
+                <p><strong>Features:</strong> Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power</p>
+                <p><strong>Compatibility:</strong> HE Compatible</p>
+                <p><strong>Packaging:</strong> Liquid detergent in secure bottle with easy-pour spout</p>
+                
+                <h3>Key Benefits:</h3>
+                <ul>
+                    <li>Advanced stain removal with Oxi power</li>
+                    <li>Works in all water temperatures</li>
+                    <li>HE washer compatible</li>
+                    <li>Fresh, clean scent</li>
+                    <li>Concentrated formula - less waste</li>
+                </ul>
+                
+                <h3>Packaging Analysis:</h3>
+                <p>Based on customer reviews analyzed by PackSense:</p>
+                <ul>
+                    <li><strong>68.9%</strong> of reviews mention packaging</li>
+                    <li><strong>222</strong> packaging-related reviews out of 322 total</li>
+                    <li>Most common packaging keywords: bottle, container, package, box, cap</li>
+                    <li>Packaging satisfaction score: 7.2/10</li>
+                </ul>
+                
+                <div style="text-align: center;">
+                    <a href="/demo" class="back-btn">← Back to Analysis</a>
+                    <a href="/" class="back-btn" style="margin-left: 10px;">← Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.route("/analyze", methods=["GET", "POST"])
 def index():
