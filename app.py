@@ -128,66 +128,98 @@ def demo():
         with open(recursive_analysis_path, 'r', encoding='utf-8') as f:
             recursive_data = json.load(f)
         
-        # Extract reviews safely - limit to first 50 reviews to avoid data issues
+        # Extract reviews safely - limit to first 20 reviews
         reviews = []
         try:
             if 'initial_reviews' in recursive_data and 'reviews' in recursive_data['initial_reviews']:
                 all_reviews = recursive_data['initial_reviews']['reviews']
-                # Take only first 50 reviews and ensure they have proper structure
-                for review in all_reviews[:50]:
+                # Take only first 20 reviews
+                for review in all_reviews[:20]:
                     if isinstance(review, dict) and 'review_text' in review:
-                        # Clean the review data
-                        clean_review = {
-                            'review_title': str(review.get('review_title', '')),
-                            'review_text': str(review.get('review_text', '')),
-                            'reviewer_name': str(review.get('reviewer_name', '')),
-                            'review_date': str(review.get('review_date', '')),
-                            'rating': str(review.get('rating', '')),
-                            'verified': bool(review.get('verified', False)),
-                            'sentiment': str(review.get('sentiment', 'neutral')),
-                            'is_packaging_related': bool(review.get('is_packaging_related', False))
-                        }
-                        reviews.append(clean_review)
+                        reviews.append(review)
         except Exception as e:
             print(f"Error processing reviews: {e}")
             reviews = []
         
-        # Create safe demo data
-        demo_data = {
-            'product_name': "Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)",
-            'product_image': f"/static/{demo_folder}/product.jpg",
-            'reviews': reviews,
-            'cooccurrence_data': {},
-            'packaging_reviews': reviews[:10],  # Use first 10 as packaging reviews
-            'sentiment_summary': {
-                'positive': len([r for r in reviews if r.get('sentiment') == 'positive']),
-                'negative': len([r for r in reviews if r.get('sentiment') == 'negative']),
-                'neutral': len([r for r in reviews if r.get('sentiment') == 'neutral'])
-            },
-            'defect_analysis': {},
-            'is_demo': True,
-            'demo_folder': demo_folder,
-            'review_filters': ['all', 'positive', 'negative', 'packaging'],
-            'product_description_url': '#',
-            'total_reviews': len(reviews),
-            'packaging_review_count': len(reviews[:10]),
-            'packaging_freq': {},
-            'component_freq': {},
-            'condition_freq': {},
-            'keyword_sentence_map': {},
-            'defect_coords_map': {},
-            'enhanced_metrics': {},
-            'top_keywords': [],
-            'sentiment_distribution': {
-                'positive': len([r for r in reviews if r.get('sentiment') == 'positive']),
-                'negative': len([r for r in reviews if r.get('sentiment') == 'negative']),
-                'neutral': len([r for r in reviews if r.get('sentiment') == 'neutral'])
-            },
-            'review_timeline': [],
-            'defect_summary': {}
-        }
+        # Create a simple HTML demo page with actual Tide data
+        reviews_html = ""
+        for i, review in enumerate(reviews):
+            reviews_html += f"""
+            <div style="background: #333; padding: 15px; margin: 10px 0; border-radius: 8px;">
+                <h4 style="color: #fff; margin: 0 0 10px 0;">{review.get('review_title', 'No Title')}</h4>
+                <p style="color: #ccc; margin: 0 0 10px 0;">{review.get('review_text', 'No text')[:200]}...</p>
+                <div style="color: #999; font-size: 0.9em;">
+                    <strong>Rating:</strong> {review.get('rating', 'N/A')} | 
+                    <strong>Sentiment:</strong> {review.get('sentiment', 'neutral')} | 
+                    <strong>Reviewer:</strong> {review.get('reviewer_name', 'Anonymous')}
+                </div>
+            </div>
+            """
         
-        return render_template("results_enhanced.html", **demo_data)
+        return f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>PackSense Demo - Tide Ultra Oxi Boost</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .demo-banner {{ background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 15px; border-radius: 10px; margin-bottom: 30px; text-align: center; }}
+                .product-info {{ background: #222; padding: 20px; border-radius: 10px; margin-bottom: 30px; }}
+                .stats {{ display: flex; justify-content: space-around; background: #333; padding: 20px; border-radius: 10px; margin-bottom: 30px; }}
+                .stat-item {{ text-align: center; }}
+                .stat-number {{ font-size: 2em; font-weight: bold; color: #20c997; }}
+                .reviews-section {{ background: #111; padding: 20px; border-radius: 10px; }}
+                .back-btn {{ display: inline-block; background: #333; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎯 PackSense Demo Mode</h1>
+                <p>Intelligent Packaging Evaluation & Optimization Platform</p>
+            </div>
+            
+            <div class="demo-banner">
+                <h2>📦 Tide Ultra Oxi Boost Liquid Laundry Detergent (Demo)</h2>
+                <p>Showing real Amazon review data - No scraping required!</p>
+            </div>
+            
+            <div class="product-info">
+                <h3>📊 Analysis Summary</h3>
+                <p><strong>Total Reviews Analyzed:</strong> {recursive_data.get('total_reviews_extracted', 0)}</p>
+                <p><strong>Packaging Related Reviews:</strong> {recursive_data.get('packaging_related_reviews', 0)}</p>
+                <p><strong>Packaging Percentage:</strong> {recursive_data.get('packaging_percentage', 0):.1f}%</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">{recursive_data.get('sentiment_breakdown', {}).get('positive', 0)}</div>
+                    <div>Positive Reviews</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{recursive_data.get('sentiment_breakdown', {}).get('negative', 0)}</div>
+                    <div>Negative Reviews</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{recursive_data.get('sentiment_breakdown', {}).get('neutral', 0)}</div>
+                    <div>Neutral Reviews</div>
+                </div>
+            </div>
+            
+            <div class="reviews-section">
+                <h3>📝 Sample Reviews (First 20)</h3>
+                {reviews_html if reviews else '<p>No reviews available</p>'}
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="/" class="back-btn">← Back to Home</a>
+                <a href="/analyze" class="back-btn" style="margin-left: 10px;">Try Live Analysis</a>
+            </div>
+        </body>
+        </html>
+        """
         
     except Exception as e:
         print(f"Error loading demo data: {e}")
