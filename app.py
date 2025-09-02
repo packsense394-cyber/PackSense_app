@@ -131,24 +131,51 @@ def demo():
         # Process the demo data to match the expected template format
         reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
         
-        # Create properly formatted data for the template
+        # Clean and convert review data to proper types
+        cleaned_reviews = []
+        for review in reviews:
+            if isinstance(review, dict):
+                cleaned_review = {}
+                for key, value in review.items():
+                    if key == 'rating':
+                        # Convert "5 out of 5" to 5.0
+                        if isinstance(value, str) and 'out of' in value:
+                            try:
+                                cleaned_review[key] = float(value.split(' out of')[0])
+                            except:
+                                cleaned_review[key] = 5.0
+                        else:
+                            cleaned_review[key] = float(value) if isinstance(value, (int, float)) else 5.0
+                    elif key == 'verified':
+                        cleaned_review[key] = bool(value)
+                    elif key == 'is_packaging_related':
+                        cleaned_review[key] = bool(value)
+                    else:
+                        cleaned_review[key] = str(value) if value is not None else ""
+                cleaned_reviews.append(cleaned_review)
+        
+        # Create properly formatted data for the template with all numeric values
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
             'product_description_url': 'https://www.amazon.com/dp/B08N5WRWNW',
-            'total_reviews': len(reviews),
-            'packaging_review_count': recursive_data.get('packaging_related_reviews', 0),
-            'packaging_percentage': recursive_data.get('packaging_percentage', 0.0),
-            'sentiment_distribution': recursive_data.get('sentiment_breakdown', {'positive': 0, 'negative': 0, 'neutral': 0}),
-            'reviews': reviews,
+            'total_reviews': int(len(cleaned_reviews)),
+            'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
+            'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
+            'sentiment_distribution': {
+                'positive': int(recursive_data.get('sentiment_breakdown', {}).get('positive', 0)),
+                'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
+                'neutral': int(recursive_data.get('sentiment_breakdown', {}).get('neutral', 0))
+            },
+            'reviews': cleaned_reviews,
             'is_demo': True,
             
             # Add all the required template variables with safe defaults
             'review_filters': {
-                'all': len(reviews),
-                'packaging': recursive_data.get('packaging_related_reviews', 0),
-                'positive': recursive_data.get('sentiment_breakdown', {}).get('positive', 0),
-                'negative': recursive_data.get('sentiment_breakdown', {}).get('negative', 0),
-                'neutral': recursive_data.get('sentiment_breakdown', {}).get('neutral', 0)
+                'all': int(len(cleaned_reviews)),
+                'packaging': int(recursive_data.get('packaging_related_reviews', 0)),
+                'positive': int(recursive_data.get('sentiment_breakdown', {}).get('positive', 0)),
+                'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
+                'neutral': int(recursive_data.get('sentiment_breakdown', {}).get('neutral', 0))
             },
             'packaging_freq': recursive_data.get('packaging_freq', {}),
             'component_freq': recursive_data.get('component_freq', {}),
