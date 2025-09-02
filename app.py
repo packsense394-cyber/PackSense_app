@@ -188,6 +188,40 @@ def demo():
             {'word': 'cap', 'count': 22, 'sentiment': 'neutral'}
         ]
         
+        # Generate sample keyword frequencies (same as packaging_freq for demo)
+        sample_keyword_frequencies = sample_packaging_freq
+        
+        # Generate sample co-occurrence data
+        sample_cooccurrence_data = {
+            'nodes': [
+                {'id': 'bottle', 'group': 1, 'size': 45},
+                {'id': 'container', 'group': 1, 'size': 32},
+                {'id': 'package', 'group': 1, 'size': 28},
+                {'id': 'box', 'group': 1, 'size': 25},
+                {'id': 'cap', 'group': 1, 'size': 22}
+            ],
+            'links': [
+                {'source': 'bottle', 'target': 'container', 'weight': 15},
+                {'source': 'package', 'target': 'box', 'weight': 12},
+                {'source': 'bottle', 'target': 'cap', 'weight': 18}
+            ]
+        }
+        
+        # Generate sample keyword image map
+        sample_keyword_image_map = {
+            'bottle': ['bottle_image1.jpg', 'bottle_image2.jpg'],
+            'container': ['container_image1.jpg'],
+            'package': ['package_image1.jpg', 'package_image2.jpg']
+        }
+        
+        # Generate sample defect pairs
+        sample_defect_pairs = [
+            {'defect': 'leak', 'component': 'bottle', 'severity': 'high'},
+            {'defect': 'crack', 'component': 'cap', 'severity': 'medium'},
+            {'defect': 'broken', 'component': 'seal', 'severity': 'high'},
+            {'defect': 'spill', 'component': 'container', 'severity': 'low'}
+        ]
+        
         # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
@@ -219,7 +253,13 @@ def demo():
             'enhanced_metrics': sample_enhanced_metrics,
             'top_keywords': sample_top_keywords,
             'review_timeline': [],
-            'defect_summary': {'total_defects': 15, 'critical_defects': 3, 'minor_defects': 12}
+            'defect_summary': {'total_defects': 15, 'critical_defects': 3, 'minor_defects': 12},
+            
+            # Add the missing variables that the template expects
+            'keyword_frequencies': sample_keyword_frequencies,
+            'cooccurrence_data': sample_cooccurrence_data,
+            'keyword_image_map': sample_keyword_image_map,
+            'defect_pairs': sample_defect_pairs
         }
         
         # Render using the full results_enhanced.html template
