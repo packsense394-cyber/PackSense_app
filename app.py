@@ -252,9 +252,9 @@ def demo():
             'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
             'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
             'sentiment_distribution': {
-                'positive': int(recursive_data.get('sentiment_breakdown', {}).get('positive', 0)),
-                'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
-                'neutral': int(recursive_data.get('sentiment_breakdown', {}).get('neutral', 0))
+                'positive': len([r for r in cleaned_reviews if r.get('sentiment') == 'positive']),
+                'negative': len([r for r in cleaned_reviews if r.get('sentiment') == 'negative']),
+                'neutral': len([r for r in cleaned_reviews if r.get('sentiment') == 'neutral'])
             },
             'reviews': cleaned_reviews,
             'is_demo': True,
@@ -264,10 +264,10 @@ def demo():
             # Add all the required template variables with safe defaults
             'review_filters': {
                 'all': int(total_reviews_count),
-                'packaging': int(recursive_data.get('packaging_related_reviews', 0)),
-                'positive': int(recursive_data.get('sentiment_breakdown', {}).get('positive', 0)),
-                'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
-                'neutral': int(recursive_data.get('sentiment_breakdown', {}).get('neutral', 0))
+                'packaging': len([r for r in cleaned_reviews if r.get('is_packaging_related', False)]),
+                'positive': len([r for r in cleaned_reviews if r.get('sentiment') == 'positive']),
+                'negative': len([r for r in cleaned_reviews if r.get('sentiment') == 'negative']),
+                'neutral': len([r for r in cleaned_reviews if r.get('sentiment') == 'neutral'])
             },
             'packaging_freq': sample_packaging_freq,
             'component_freq': sample_component_freq,
