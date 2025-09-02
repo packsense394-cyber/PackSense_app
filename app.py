@@ -108,12 +108,20 @@ def intro():
     """Introduction page"""
     return render_template("intro.html")
 
+def newest_product_folder(prefix="Tide_Ultra_Oxi_Boost", base="static"):
+    """Find the newest product folder matching the prefix"""
+    import glob
+    candidates = [d for d in glob.glob(os.path.join(base, f"{prefix}*")) if os.path.isdir(d)]
+    if not candidates:
+        return None
+    return os.path.basename(max(candidates, key=os.path.getmtime))
+
 @app.route("/demo")
 def demo():
     """Demo mode - shows pre-scraped data with full PackSense dashboard"""
     try:
-        # Use the Tide Ultra Oxi Boost data as demo
-        demo_folder = "Tide_Ultra_Oxi_Boost_Liquid_Laundry_Detergent,_84_fl_oz,_59_Loads,_Advanced_Stain_Remover,_Laundry_Detergent_Liquid_with_Extra_Oxi_Power_2025-09-02"
+        # Dynamically find the newest Tide Ultra Oxi Boost folder
+        demo_folder = newest_product_folder() or "Tide_Ultra_Oxi_Boost_Liquid_Laundry_Detergent,_84_fl_oz,_59_Loads,_Advanced_Stain_Remover,_Laundry_Detergent_Liquid_with_Extra_Oxi_Power_2025-09-02"
         
         # Check if demo data exists
         demo_path = os.path.join("static", demo_folder)
@@ -130,6 +138,7 @@ def demo():
         
         # Process the demo data to match the expected template format
         reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
+        total_reviews_count = recursive_data.get('total_reviews_extracted', len(reviews))
         
         # Clean and convert review data to proper types
         cleaned_reviews = []
@@ -228,11 +237,18 @@ def demo():
             {'defect': 'spill', 'component': 'container', 'severity': 'low'}
         ]
         
+        # Generate image URLs for defect modal
+        product_image_rel = f'{demo_folder}/product.jpg'
+        defects_overlay_rel = f'{demo_folder}/defects_overlay.png'
+        
+        product_image_url = url_for('static', filename=product_image_rel) if os.path.exists(os.path.join('static', product_image_rel)) else None
+        defect_overlay_url = url_for('static', filename=defects_overlay_rel) if os.path.exists(os.path.join('static', defects_overlay_rel)) else None
+        
         # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
-            'product_description_url': '/demo-product',
-            'total_reviews': int(len(cleaned_reviews)),
+            'product_description_url': '/demo',
+            'total_reviews': int(total_reviews_count),
             'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
             'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
             'sentiment_distribution': {
@@ -242,10 +258,12 @@ def demo():
             },
             'reviews': cleaned_reviews,
             'is_demo': True,
+            'product_image_url': product_image_url,
+            'defect_overlay_url': defect_overlay_url,
             
             # Add all the required template variables with safe defaults
             'review_filters': {
-                'all': int(len(cleaned_reviews)),
+                'all': int(total_reviews_count),
                 'packaging': int(recursive_data.get('packaging_related_reviews', 0)),
                 'positive': int(recursive_data.get('sentiment_breakdown', {}).get('positive', 0)),
                 'negative': int(recursive_data.get('sentiment_breakdown', {}).get('negative', 0)),
