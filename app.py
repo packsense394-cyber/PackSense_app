@@ -149,7 +149,11 @@ def demo():
             'sentiment_summary': sentiment_summary,
             'defect_analysis': defect_analysis,
             'is_demo': True,
-            'demo_folder': demo_folder
+            'demo_folder': demo_folder,
+            'review_filters': ['all', 'positive', 'negative', 'packaging'],
+            'product_description_url': '#',
+            'total_reviews': len(reviews),
+            'packaging_review_count': len(packaging_reviews)
         }
         
         return render_template("results_enhanced.html", **demo_data)
