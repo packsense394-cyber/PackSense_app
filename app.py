@@ -254,32 +254,47 @@ def demo():
             s = _norm_sent(x)
             return s in {"true", "1", "yes", "y"}
         
-        # Compute KPI counts from actual review data
-        total = len(cleaned_reviews)
-        pos = neu = neg = pack = 0
-        for r in cleaned_reviews:
-            sent = _norm_sent(r.get("sentiment"))
-            if sent.startswith("pos"): 
-                pos += 1
-            elif sent.startswith("neu"): 
-                neu += 1
-            elif sent.startswith("neg"): 
-                neg += 1
-            # packaging flag may be bool or string
-            if _as_bool(r.get("is_packaging_related")):
-                pack += 1
+        # Compute KPI counts from FULL review data (no slicing)
+        reviews_full = cleaned_reviews  # FULL LIST – no slicing here
         
-        # defects: use whatever we have, else 0
-        defects = len(sample_defect_pairs) or 0
+        def _norm(s): 
+            return str(s or "").strip().lower()
+        
+        def _truthy(x):
+            if isinstance(x, bool): 
+                return x
+            return _norm(x) in {"true", "1", "yes", "y"}
+        
+        pos = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("pos"))
+        neu = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neu"))
+        neg = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neg"))
+        pack = sum(1 for r in reviews_full if _truthy(r.get("is_packaging_related")))
+        
+        # Defects: prefer detailed counts if available; otherwise fall back to number of keys/pairs
+        defect_pairs = sample_defect_pairs
+        defect_summary = demo_data.get("defect_summary", {})
+        if isinstance(defect_summary, dict) and defect_summary:
+            # sum nested counts if they're numbers; else count leaves
+            def _sum_counts(obj):
+                if isinstance(obj, dict):
+                    return sum(_sum_counts(v) for v in obj.values())
+                try:
+                    return int(obj)
+                except Exception:
+                    return 0
+            defects = _sum_counts(defect_summary)
+        else:
+            defects = len(defect_pairs) if defect_pairs else int(demo_data.get("defects_detected") or 0)
         
         # Create KPI object for template
         kpi = {
-            "total": total,
+            "total": len(reviews_full),
             "positive": pos,
             "neutral": neu,
             "negative": neg,
-            "defects": defects,
             "packaging_related": pack,
+            "packaging_pct": round((pack / len(reviews_full) * 100), 1) if reviews_full else 0.0,
+            "defects": defects,
         }
         
         # Create properly formatted data for the template with all required fields
@@ -294,7 +309,7 @@ def demo():
                 'negative': neg,
                 'neutral': neu
             },
-            'reviews': cleaned_reviews,
+            'reviews': reviews_full,  # Use full reviews for rendering
             'is_demo': True,
             'product_image_url': product_image_url,
             'defect_overlay_url': defect_overlay_url,

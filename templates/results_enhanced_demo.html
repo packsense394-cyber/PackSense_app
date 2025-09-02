@@ -1134,16 +1134,14 @@
                     <div class="metric-label">Total Reviews</div>
                 </div>
 
-                {% if enhanced_metrics.has_enhanced_data %}
                 <div class="metric-card">
                     <span class="metric-icon">🔍</span>
-                    <div class="metric-value">{{ enhanced_metrics.packaging_related }}</div>
+                    <div class="metric-value" id="kpi-pack">{{ kpi.packaging_related|default(0) }}</div>
                     <div class="metric-label">Packaging Related</div>
                     <div style="font-size: 0.8em; color: #666; margin-top: 5px;">
-                        {{ "%.1f"|format(enhanced_metrics.packaging_percentage) }}% of total
+                        {{ kpi.packaging_pct|default(0) }}% of total
                     </div>
                 </div>
-                {% endif %}
 
                 <div class="metric-card">
                     <span class="metric-icon">😊</span>
@@ -3987,7 +3985,7 @@
         }
         
         // Pagination functionality
-        const totalReviews = parseInt('{{ reviews|length }}');
+        const totalReviews = (window.allReviews?.length) || 0;
         
         // Initialize pagination
         function initializePagination() {
@@ -4166,7 +4164,8 @@
                 const pr = r.is_packaging_related;
                 if (pr === true || norm(pr)==='true' || pr === 1) pack++;
             }
-            return { total: reviews.length, positive: pos, neutral: neu, negative: neg, packaging_related: pack };
+            const packaging_pct = reviews.length > 0 ? Math.round((pack / reviews.length * 100) * 10) / 10 : 0;
+            return { total: reviews.length, positive: pos, neutral: neu, negative: neg, packaging_related: pack, packaging_pct: packaging_pct };
         }
 
         function setText(id, val) {
@@ -4179,6 +4178,7 @@
 
             // KPIs
             setText('kpi-total', c.total);
+            setText('kpi-pack', c.packaging_related);
             setText('kpi-positive', c.positive);
             setText('kpi-neutral', c.neutral);
             setText('kpi-negative', c.negative);
