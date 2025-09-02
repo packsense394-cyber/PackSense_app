@@ -1169,16 +1169,16 @@
             </div>
 
             <!-- Packaging Keyword Frequencies Word Cloud -->
-            {% if enhanced_metrics.has_enhanced_data %}
             <div class="word-cloud-container">
                 <h3><i class="fas fa-cloud"></i> PACKAGING KEYWORD FREQUENCIES</h3>
                 <p>Hover over words to see their frequency in packaging-related reviews</p>
-                <div class="word-cloud" id="word-cloud">
-                    <!-- Word cloud will be generated here -->
-                </div>
+                <div id="wordcloud" style="position:relative; height:360px; border-radius:16px; overflow:hidden; background:rgba(255,255,255,0.06);"></div>
                 <div class="word-tooltip" id="word-tooltip"></div>
             </div>
-            {% endif %}
+
+            <script>
+                window.packagingFreq = {{ packaging_freq | default({}) | tojson }};
+            </script>
 
             <!-- Reviews Section -->
             <div class="reviews-section">
@@ -1853,6 +1853,105 @@
         document.addEventListener('DOMContentLoaded', function() {
             generateWordCloud();
         });
+
+        // Dependency-free wordcloud renderer (fallback)
+        (function(){
+            const freqObj = window.packagingFreq || {};
+            const entries = Object.entries(freqObj).filter(([k,v]) => !!k && Number(v) > 0);
+
+            const container = document.getElementById('wordcloud');
+            if (!container) return;
+
+            if (entries.length === 0) {
+                container.innerHTML = '<div style="color:#bbb;display:flex;height:100%;align-items:center;justify-content:center;">No packaging keywords available</div>';
+                return;
+            }
+
+            // sort by count so big terms are placed first
+            entries.sort((a,b) => b[1] - a[1]);
+
+            const counts = entries.map(e => Number(e[1]));
+            const minC = Math.min(...counts), maxC = Math.max(...counts);
+
+            // font size scale (px)
+            const size = c => {
+                if (maxC === minC) return 24;
+                const t = (c - minC) / (maxC - minC);
+                return Math.round(14 + t * 46); // 14–60px
+            };
+
+            // pastel-ish pill styles
+            const pill = (text, px) => {
+                const el = document.createElement('div');
+                el.textContent = text;
+                el.style.position = 'absolute';
+                el.style.fontWeight = '700';
+                el.style.fontSize = px + 'px';
+                el.style.padding = '6px 14px';
+                el.style.borderRadius = '999px';
+                el.style.backdropFilter = 'blur(2px)';
+                el.style.boxShadow = '0 4px 18px rgba(0,0,0,0.15)';
+                el.style.border = '1px solid rgba(255,255,255,0.2)';
+                el.style.whiteSpace = 'nowrap';
+                // random-ish neon palette without specifying exact colors
+                el.style.background = 'rgba(255,255,255,0.08)';
+                el.style.color = '#e6e6e6';
+                return el;
+            };
+
+            // grid placement (avoids overlap without heavy libs)
+            const W = container.clientWidth;
+            const H = container.clientHeight;
+            const cols = 8, rows = 5;                   // tweak for density
+            const cellW = W / cols, cellH = H / rows;
+            const taken = new Set();
+
+            function place(el, col, row) {
+                const x = Math.round(col * cellW + (cellW - el.offsetWidth) / 2);
+                const y = Math.round(row * cellH + (cellH - el.offsetHeight) / 2);
+                el.style.left = Math.max(6, Math.min(W - el.offsetWidth - 6, x)) + 'px';
+                el.style.top  = Math.max(6, Math.min(H - el.offsetHeight - 6, y)) + 'px';
+            }
+
+            // scatter big words first, then smaller ones
+            entries.forEach(([word, c], i) => {
+                const px = size(c);
+                const el = pill(word, px);
+                container.appendChild(el);          // must attach to measure size
+
+                // choose a free-ish grid cell
+                let tries = 0, col = 0, row = 0;
+                do {
+                    // weighted center bias for larger words
+                    const bias = Math.max(0, 1 - (px / 60));
+                    const rc = Math.random();
+                    col = Math.floor((rc * bias + (1 - bias) * 0.5) * cols);
+                    row = Math.floor((Math.random() * bias + (1 - bias) * 0.5) * rows);
+                    tries++;
+                } while (taken.has(`${col},${row}`) && tries < 30);
+
+                taken.add(`${col},${row}`);
+                place(el, col, row);
+            });
+
+            // handle resize
+            let rAF = null;
+            window.addEventListener('resize', () => {
+                cancelAnimationFrame(rAF);
+                rAF = requestAnimationFrame(() => {
+                    const W2 = container.clientWidth, H2 = container.clientHeight;
+                    const cellW2 = W2 / cols, cellH2 = H2 / rows;
+                    Array.from(container.children).forEach((el, idx) => {
+                        const key = Array.from(taken)[idx] || '0,0';
+                        const [c, r] = key.split(',').map(Number);
+                        const x = Math.round(c * cellW2 + (cellW2 - el.offsetWidth) / 2);
+                        const y = Math.round(r * cellH2 + (cellH2 - el.offsetHeight) / 2);
+                        el.style.left = Math.max(6, Math.min(W2 - el.offsetWidth - 6, x)) + 'px';
+                        el.style.top  = Math.max(6, Math.min(H2 - el.offsetHeight - 6, y)) + 'px';
+                    });
+                });
+            });
+        })();
         
         // Update visible count
         function updateVisibleCount() {

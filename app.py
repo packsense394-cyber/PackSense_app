@@ -166,12 +166,33 @@ def demo():
                         cleaned_review[key] = str(value) if value is not None else ""
                 cleaned_reviews.append(cleaned_review)
         
-        # Generate sample packaging frequency data for demo
-        sample_packaging_freq = {
-            'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
-            'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
-            'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
-        }
+        # Load and clean packaging frequency data from JSON
+        def to_num(x):
+            try:
+                return float(str(x).replace(',', '').strip())
+            except Exception:
+                return 0.0
+
+        raw_freq = (recursive_data or {}).get("packaging_freq", {})
+
+        # Accept both {"word": count} and [{"keyword": "...", "count": ...}] shapes
+        if isinstance(raw_freq, dict):
+            packaging_freq = {str(k): to_num(v) for k, v in raw_freq.items()}
+        elif isinstance(raw_freq, list):
+            packaging_freq = {}
+            for item in raw_freq:
+                if isinstance(item, dict):
+                    key = str(item.get("keyword") or item.get("term") or item.get("key") or "").strip()
+                    val = to_num(item.get("count") or item.get("value") or item.get("freq") or 0)
+                    if key:
+                        packaging_freq[key] = packaging_freq.get(key, 0) + val
+        else:
+            # Fallback to sample data if no real data
+            packaging_freq = {
+                'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
+                'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
+                'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
+            }
         
         # Generate sample component frequency data
         sample_component_freq = {
@@ -201,7 +222,7 @@ def demo():
         ]
         
         # Generate sample keyword frequencies (same as packaging_freq for demo)
-        sample_keyword_frequencies = sample_packaging_freq
+        sample_keyword_frequencies = packaging_freq
         
         # Generate sample co-occurrence data with proper structure
         sample_cooccurrence_data = {
@@ -320,7 +341,7 @@ def demo():
                 'negative': neg,
                 'neutral': neu
             },
-            'packaging_freq': sample_packaging_freq,
+            'packaging_freq': packaging_freq,
             'component_freq': sample_component_freq,
             'condition_freq': sample_condition_freq,
             'keyword_sentence_map': {},
