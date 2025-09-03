@@ -480,6 +480,14 @@ def demo():
         product_image_url = url_for('static', filename=product_image_rel) if os.path.exists(os.path.join('static', product_image_rel)) else None
         defect_overlay_url = url_for('static', filename=defects_overlay_rel) if os.path.exists(os.path.join('static', defects_overlay_rel)) else None
         
+        print(f"Demo folder: {demo_folder}")
+        print(f"Product image path: {os.path.join('static', product_image_rel)}")
+        print(f"Product image exists: {os.path.exists(os.path.join('static', product_image_rel))}")
+        print(f"Product image URL: {product_image_url}")
+        print(f"Defect overlay path: {os.path.join('static', defects_overlay_rel)}")
+        print(f"Defect overlay exists: {os.path.exists(os.path.join('static', defects_overlay_rel))}")
+        print(f"Defect overlay URL: {defect_overlay_url}")
+        
         # Helper functions for robust data processing
         def _norm_sent(x):
             return str(x or "").strip().lower()
