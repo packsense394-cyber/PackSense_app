@@ -245,90 +245,105 @@ def demo():
         # Generate packaging_terms list for dropdowns
         packaging_terms = sorted(packaging_freq.keys()) if packaging_freq else []
         
-        # Build co-occurrence graph with canonical schema
+        # Bulletproof co-occurrence graph builder
+        def _normalize_graph(raw):
+            """Accept a few common shapes and return {'nodes':[{id,label,count}], 'links':[{source,target,weight}]}"""
+            if not isinstance(raw, dict): return None
+            nodes_raw, links_raw = raw.get("nodes"), raw.get("links")
+            if not isinstance(nodes_raw, list) or not isinstance(links_raw, list): return None
+
+            seen = set()
+            nodes = []
+            for n in nodes_raw:
+                nid = str( (n.get("id") or n.get("name") or n.get("label") or "") ).strip()
+                if not nid or nid in seen: continue
+                nodes.append({
+                    "id": nid,
+                    "label": n.get("label") or nid,
+                    "count": int(n.get("count") or n.get("value") or 1)
+                })
+                seen.add(nid)
+
+            links = []
+            for e in links_raw:
+                src = e.get("source"); tgt = e.get("target")
+                # handle {source:{id:...}} or plain strings
+                if isinstance(src, dict): src = src.get("id")
+                if isinstance(tgt, dict): tgt = tgt.get("id")
+                s = str(src or "").strip(); t = str(tgt or "").strip()
+                if not s or not t or s == t: continue
+                links.append({
+                    "source": s,
+                    "target": t,
+                    "weight": int(e.get("weight") or e.get("value") or 1)
+                })
+            return {"nodes": nodes, "links": links} if nodes and links else None
+
         def build_cooc_graph(recursive_data, packaging_terms=None, min_pair_count=2, top_n_terms=50):
-            """
-            Canonical schema:
-            {
-              "nodes": [{"id": "bottle", "label": "bottle", "count": 42}],
-              "links": [{"source": "bottle", "target": "leak", "weight": 4}]
-            }
-            weights are ints 1..5 scaled from raw pair counts
-            """
-            from collections import defaultdict, Counter
-            import itertools, re
+            """Canonical graph; falls back to looser thresholds if empty."""
+            import re, itertools
+            from collections import Counter
             
             def _tok(s):
+                # tokens like 'bottle', 'box', 'leak', 'cap'
                 return re.findall(r"[A-Za-z][A-Za-z\-]+", (s or "").lower())
             
-            # 0) If JSON already provides graph in correct-ish shape, normalize and return.
-            raw = (recursive_data or {}).get("cooccurrence_graph")
-            if isinstance(raw, dict) and isinstance(raw.get("nodes"), list) and isinstance(raw.get("links"), list):
-                nodes = []
-                seen = set()
-                for n in raw["nodes"]:
-                    nid = str(n.get("id") or n.get("name") or n.get("label") or "").strip()
-                    if nid and nid not in seen:
-                        nodes.append({"id": nid, "label": n.get("label") or nid, "count": int(n.get("count") or n.get("value") or 1)})
-                        seen.add(nid)
-                links = []
-                for e in raw["links"]:
-                    s = str(e.get("source") if not isinstance(e.get("source"), dict) else e["source"].get("id")).strip()
-                    t = str(e.get("target") if not isinstance(e.get("target"), dict) else e["target"].get("id")).strip()
-                    w = e.get("weight") or e.get("value") or 1
-                    if s and t and s != t:
-                        links.append({"source": s, "target": t, "weight": int(w)})
-                if nodes and links:
-                    return {"nodes": nodes, "links": links}
+            # 0) If precomputed in JSON, normalize and return
+            norm = _normalize_graph((recursive_data or {}).get("cooccurrence_graph"))
+            if norm: return norm
 
-            # 1) Build from packaging reviews / keyword maps
             reviews = (recursive_data or {}).get("reviews", [])
-            packaging_reviews = [r for r in reviews if _truthy(r.get("is_packaging_related"))]
+            pkg_reviews = [r for r in reviews if _truthy(r.get("is_packaging_related"))] or reviews
 
-            # Allowed terms (from packaging_freq) if provided
+            # terms whitelist from packaging_freq if provided
             if packaging_terms is None:
                 pf = (recursive_data or {}).get("packaging_freq") or {}
-                if isinstance(pf, dict): packaging_terms = {str(k).lower() for k in pf.keys()}
-                else: packaging_terms = set()
+                packaging_terms = set(map(lambda k: str(k).lower(), pf.keys())) if isinstance(pf, dict) else set()
+            else:
+                packaging_terms = set(map(str.lower, packaging_terms or []))
 
-            # If keyword_sentence_map exists, use it to seed term counts
-            ksm = (recursive_data or {}).get("keyword_sentence_map") or {}
-            term_counts = Counter({str(k).lower(): len(v or []) for k, v in (ksm.items() if isinstance(ksm, dict) else [])})
+            # term counts (prefer keyword_sentence_map)
+            ksm = (recursive_data or {}).get("keyword_sentence_map")
+            term_counts = Counter()
+            if isinstance(ksm, dict) and ksm:
+                for k, v in ksm.items():
+                    k = str(k).lower()
+                    if (not packaging_terms) or (k in packaging_terms):
+                        term_counts[k] += len(v or [])
+            else:
+                for r in pkg_reviews:
+                    for w in set(_tok(r.get("review_text"))):
+                        if (not packaging_terms) or (w in packaging_terms):
+                            term_counts[w] += 1
 
-            # Fallback: count terms directly from packaging reviews
-            for r in packaging_reviews:
-                words = set(_tok(r.get("review_text")))
-                for w in words:
-                    if not packaging_terms or w in packaging_terms:
-                        term_counts[w] += 1
+            if not term_counts:
+                return {"nodes": [], "links": []}
 
-            # Keep top N frequent terms (like local)
             top_terms = set([t for t, _ in term_counts.most_common(top_n_terms)])
 
-            # Build pair counts
+            # pair counts
             pair_counts = Counter()
-            for r in packaging_reviews:
-                words = set(w for w in _tok(r.get("review_text")) if w in top_terms)
-                for a, b in itertools.combinations(sorted(words), 2):
+            for r in pkg_reviews:
+                words = sorted(w for w in set(_tok(r.get("review_text"))) if w in top_terms)
+                for a, b in itertools.combinations(words, 2):
                     pair_counts[(a, b)] += 1
 
-            # Threshold
-            pair_counts = {k: v for k, v in pair_counts.items() if v >= min_pair_count}
-
-            # Scale weights to 1..5
-            if pair_counts:
-                vals = list(pair_counts.values())
+            # try strict threshold first; if empty, relax automatically
+            thresholds = [min_pair_count, 1]
+            graph = None
+            for thr in thresholds:
+                pairs = {k: v for k, v in pair_counts.items() if v >= thr}
+                if not pairs: 
+                    continue
+                vals = list(pairs.values())
                 vmin, vmax = min(vals), max(vals)
-                def scale(v):
-                    if vmax == vmin: return 3
-                    return max(1, min(5, int(round(1 + 4 * (v - vmin) / (vmax - vmin)))))
-            else:
-                scale = lambda v: 1
+                scale = (lambda v: 3) if vmin == vmax else (lambda v: max(1, min(5, int(round(1 + 4*(v - vmin)/(vmax - vmin))))))
+                nodes = [{"id": t, "label": t, "count": int(term_counts[t])} for t in sorted(top_terms)]
+                links = [{"source": a, "target": b, "weight": scale(c)} for (a, b), c in pairs.items()]
+                graph = {"nodes": nodes, "links": links}
+                if graph["links"]: break
 
-            nodes = [{"id": t, "label": t, "count": int(term_counts[t])} for t in sorted(top_terms)]
-            links = [{"source": a, "target": b, "weight": scale(c)} for (a, b), c in pair_counts.items()]
-
-            return {"nodes": nodes, "links": links}
+            return graph or {"nodes": [], "links": []}
         
         # Build co-occurrence graph
         cooc_graph = build_cooc_graph(recursive_data, packaging_terms=set([t.lower() for t in packaging_terms]),
