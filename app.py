@@ -534,7 +534,7 @@ def demo():
         # Create properly formatted data for the template with all required fields
         demo_data = {
             'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
-            'product_description_url': '/demo',
+            'product_description_url': '/demo-product',
             'total_reviews': int(total_reviews_count),
             'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
             'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
