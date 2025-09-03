@@ -703,7 +703,54 @@ def index():
             
         except Exception as e:
             print(f"Error in recursive analysis: {e}")
-            return f"Analysis failed: {str(e)}", 500
+            return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>PackSense - Live Scraping Temporarily Paused</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
+                    .container { max-width: 800px; margin: 0 auto; padding: 50px 20px; }
+                    .header { margin-bottom: 40px; }
+                    .message { background: #222; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+                    .options { background: #333; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+                    .btn { display: inline-block; background: #007bff; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px; font-weight: bold; }
+                    .btn:hover { background: #0056b3; }
+                    .btn-demo { background: #28a745; }
+                    .btn-demo:hover { background: #1e7e34; }
+                    .btn-github { background: #6f42c1; }
+                    .btn-github:hover { background: #5a32a3; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🚫 Live Scraping Temporarily Paused</h1>
+                    </div>
+                    
+                    <div class="message">
+                        <h2>Amazon has detected automated activity from our service</h2>
+                        <p>We're working with their team to align on a compliant path forward. During this review, live scraping is disabled.</p>
+                    </div>
+                    
+                    <div class="options">
+                        <h3>What you can do now:</h3>
+                        <p><strong>Explore Demo Mode</strong> — full UI with sample data (no scraping required)</p>
+                        <p><strong>Run Locally</strong> — clone the repo and run on your machine</p>
+                        
+                        <div style="margin-top: 30px;">
+                            <a href="/demo" class="btn btn-demo">🎯 Try Demo Mode</a>
+                            <a href="https://github.com/packsense394-cyber/PackSense_app" class="btn btn-github" target="_blank">📁 View on GitHub</a>
+                        </div>
+                    </div>
+                    
+                    <p><em>We'll restore live functionality as soon as the review wraps.</em></p>
+                </div>
+            </body>
+            </html>
+            """, 503
 
     # GET request - show form
     return render_template("index.html")
@@ -1472,7 +1519,54 @@ def enhanced_analyze():
             
         except Exception as e:
             print(f"Error in enhanced analysis: {e}")
-            return f"Analysis failed: {str(e)}", 500
+            return """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>PackSense - Live Scraping Temporarily Paused</title>
+                <style>
+                    body { font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
+                    .container { max-width: 800px; margin: 0 auto; padding: 50px 20px; }
+                    .header { margin-bottom: 40px; }
+                    .message { background: #222; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+                    .options { background: #333; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+                    .btn { display: inline-block; background: #007bff; color: #fff; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px; font-weight: bold; }
+                    .btn:hover { background: #0056b3; }
+                    .btn-demo { background: #28a745; }
+                    .btn-demo:hover { background: #1e7e34; }
+                    .btn-github { background: #6f42c1; }
+                    .btn-github:hover { background: #5a32a3; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🚫 Live Scraping Temporarily Paused</h1>
+                    </div>
+                    
+                    <div class="message">
+                        <h2>Amazon has detected automated activity from our service</h2>
+                        <p>We're working with their team to align on a compliant path forward. During this review, live scraping is disabled.</p>
+                    </div>
+                    
+                    <div class="options">
+                        <h3>What you can do now:</h3>
+                        <p><strong>Explore Demo Mode</strong> — full UI with sample data (no scraping required)</p>
+                        <p><strong>Run Locally</strong> — clone the repo and run on your machine</p>
+                        
+                        <div style="margin-top: 30px;">
+                            <a href="/demo" class="btn btn-demo">🎯 Try Demo Mode</a>
+                            <a href="https://github.com/packsense394-cyber/PackSense_app" class="btn btn-github" target="_blank">📁 View on GitHub</a>
+                        </div>
+                    </div>
+                    
+                    <p><em>We'll restore live functionality as soon as the review wraps.</em></p>
+                </div>
+            </body>
+            </html>
+            """, 503
 
     # GET request - show form
     return render_template("enhanced_analyze.html")
