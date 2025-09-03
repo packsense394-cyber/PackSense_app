@@ -465,12 +465,12 @@ def demo():
             'package': ['package_image1.jpg', 'package_image2.jpg']
         }
         
-        # Generate sample defect pairs
+        # Generate sample defect pairs (as tuples for template compatibility)
         sample_defect_pairs = [
-            {'defect': 'leak', 'component': 'bottle', 'severity': 'high'},
-            {'defect': 'crack', 'component': 'cap', 'severity': 'medium'},
-            {'defect': 'broken', 'component': 'seal', 'severity': 'high'},
-            {'defect': 'spill', 'component': 'container', 'severity': 'low'}
+            ('bottle', 'leak'),
+            ('cap', 'crack'),
+            ('seal', 'broken'),
+            ('container', 'spill')
         ]
         
         # Generate image URLs for defect modal
@@ -1564,6 +1564,10 @@ def chat():
     all_text = " ".join(str(r.get("review_text", "")) for r in reviews)
     lm = user_msg.lower()
     reply = None
+    
+    print(f"Chat request received: {user_msg}")
+    print(f"Number of reviews: {len(reviews)}")
+    print(f"All text length: {len(all_text)}")
 
     # 1) Greeting
     if lm in ("hi", "hello"):
@@ -1702,6 +1706,7 @@ def chat():
             "Sorry, I didn't get that. Type `help` to see what I can do."
         )
 
+    print(f"Chat response: {reply}")
     return jsonify(reply=reply)
 
 def scheduled_scrape():
