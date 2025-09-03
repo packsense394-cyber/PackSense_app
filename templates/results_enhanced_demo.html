@@ -1876,6 +1876,76 @@
             hydrateSelect('packaging-filter', window.packagingTerms || []);
         });
 
+        // Tooltip functions for wordcloud
+        function showTooltip(event, word, count, percentage) {
+            // Remove existing tooltip
+            hideTooltip();
+            
+            const tooltip = document.createElement('div');
+            tooltip.id = 'wordcloud-tooltip';
+            tooltip.innerHTML = `
+                <div style="
+                    background: rgba(0, 0, 0, 0.9);
+                    border: 1px solid rgba(0, 255, 240, 0.3);
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    color: #fff;
+                    font-family: 'Inter', sans-serif;
+                    font-size: 14px;
+                    font-weight: 600;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+                    backdrop-filter: blur(10px);
+                    position: absolute;
+                    z-index: 1000;
+                    pointer-events: none;
+                    white-space: nowrap;
+                    text-align: center;
+                ">
+                    <div style="color: #00ffff; font-size: 16px; font-weight: 700; margin-bottom: 4px;">${word}</div>
+                    <div style="color: #fff; font-size: 13px;">${count} occurrences</div>
+                    <div style="color: #00ffff; font-size: 13px;">${percentage}% of max frequency</div>
+                </div>
+            `;
+            
+            document.body.appendChild(tooltip);
+            
+            // Position tooltip
+            const rect = event.target.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            let top = rect.top - tooltipRect.height - 10;
+            
+            // Adjust if tooltip goes off screen
+            if (left < 10) left = 10;
+            if (left + tooltipRect.width > viewportWidth - 10) left = viewportWidth - tooltipRect.width - 10;
+            if (top < 10) top = rect.bottom + 10;
+            
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            
+            // Fade in animation
+            tooltip.style.opacity = '0';
+            tooltip.style.transition = 'opacity 0.2s ease';
+            setTimeout(() => {
+                tooltip.style.opacity = '1';
+            }, 10);
+        }
+        
+        function hideTooltip() {
+            const existingTooltip = document.getElementById('wordcloud-tooltip');
+            if (existingTooltip) {
+                existingTooltip.style.opacity = '0';
+                setTimeout(() => {
+                    if (existingTooltip.parentNode) {
+                        existingTooltip.parentNode.removeChild(existingTooltip);
+                    }
+                }, 200);
+            }
+        }
+
         // Neon word cloud renderer (matching localhost design)
         (function renderNeonCloud(){
             const freqObj = window.packagingFreq || {};
@@ -1924,7 +1994,7 @@
             const shuffledPalette = [...PALETTE].sort(() => Math.random() - 0.5);
             const colorFor = i => shuffledPalette[i % shuffledPalette.length];
 
-            function pill(word, px, i){
+            function pill(word, px, i, count){
                 const [h,s,l] = colorFor(i);
                 const c1 = `hsl(${h} ${s}% ${Math.max(30, l-18)}%)`;
                 const c2 = `hsl(${h} ${s}% ${Math.min(70, l+4)}%)`;
@@ -1950,8 +2020,25 @@
                 d.style.userSelect= 'none';
                 d.style.transform = `rotate(${(Math.random()-.5)*4}deg)`; // tiny rotation
                 d.style.transition= 'transform .15s ease, box-shadow .15s ease, filter .15s ease';
-                d.onmouseenter = ()=>{ d.style.filter='brightness(1.07)'; d.style.transform+=' scale(1.03)';};
-                d.onmouseleave = ()=>{ d.style.filter=''; d.style.transform=d.style.transform.replace(' scale(1.03)','');};
+                d.style.cursor = 'pointer';
+                
+                // Calculate percentage of max frequency
+                const percentage = ((count / maxC) * 100).toFixed(1);
+                
+                d.onmouseenter = (e)=>{
+                    d.style.filter='brightness(1.07)'; 
+                    d.style.transform+=' scale(1.03)';
+                    
+                    // Show tooltip
+                    showTooltip(e, word, count, percentage);
+                };
+                d.onmouseleave = ()=>{
+                    d.style.filter=''; 
+                    d.style.transform=d.style.transform.replace(' scale(1.03)','');
+                    
+                    // Hide tooltip
+                    hideTooltip();
+                };
                 return d;
             }
 
@@ -2023,7 +2110,7 @@
             // Place words with better distribution
             data.forEach(([w,c], idx)=>{
                 const px = size(Number(c));
-                const p = pill(w, px, idx);
+                const p = pill(w, px, idx, Number(c));
                 el.appendChild(p); // append to measure
 
                 const pos = findPosition(p.offsetWidth, p.offsetHeight);
