@@ -2037,7 +2037,22 @@
             const freqObj = window.packagingFreq || {};
             const entries = Object.entries(freqObj).filter(([k,v]) => k && Number(v)>0);
             const el = document.getElementById('wordcloud');
-            if (!el) return;
+            
+            console.log('Word cloud renderer called');
+            console.log('packagingFreq:', freqObj);
+            console.log('entries:', entries);
+            console.log('wordcloud element:', el);
+            
+            if (!el) {
+                console.error('Word cloud element not found!');
+                return;
+            }
+            
+            if (entries.length === 0) {
+                console.warn('No word cloud entries found, showing fallback');
+                el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;font-size:1.2em;">No packaging keywords available</div>';
+                return;
+            }
 
             // Enhanced transparent neon background
             el.style.background =
@@ -5045,5 +5060,4 @@
     </script>
 
 </body>
-</html> 
 </html> 
