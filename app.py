@@ -345,9 +345,9 @@ def demo():
 
             return graph or {"nodes": [], "links": []}
         
-        # Build co-occurrence graph
+        # Build co-occurrence graph with more terms to match localhost
         cooc_graph = build_cooc_graph(recursive_data, packaging_terms=set([t.lower() for t in packaging_terms]),
-                                      min_pair_count=2, top_n_terms=50)
+                                      min_pair_count=1, top_n_terms=100)
         
         # Debug logging
         print(f"DEBUG: packaging_terms count: {len(packaging_terms)}")
@@ -360,33 +360,64 @@ def demo():
             packaging_reviews = [r for r in recursive_data['reviews'] if _truthy(r.get('is_packaging_related'))]
             print(f"DEBUG: packaging reviews: {len(packaging_reviews)}")
         
-        # Fallback: if no graph data, create sample data for demo
+        # Fallback: if no graph data, create comprehensive sample data for demo
         if not cooc_graph.get('nodes') or not cooc_graph.get('links'):
-            print("DEBUG: No co-occurrence data found, using sample data")
+            print("DEBUG: No co-occurrence data found, using comprehensive sample data")
             cooc_graph = {
                 'nodes': [
                     {'id': 'bottle', 'label': 'bottle', 'count': 45},
-                    {'id': 'leak', 'label': 'leak', 'count': 32},
-                    {'id': 'package', 'label': 'package', 'count': 28},
-                    {'id': 'container', 'label': 'container', 'count': 25},
-                    {'id': 'cap', 'label': 'cap', 'count': 22},
-                    {'id': 'box', 'label': 'box', 'count': 20},
-                    {'id': 'seal', 'label': 'seal', 'count': 18},
-                    {'id': 'damage', 'label': 'damage', 'count': 15},
-                    {'id': 'spill', 'label': 'spill', 'count': 12},
-                    {'id': 'tape', 'label': 'tape', 'count': 10}
+                    {'id': 'leak', 'label': 'leak', 'count': 42},
+                    {'id': 'package', 'label': 'package', 'count': 38},
+                    {'id': 'container', 'label': 'container', 'count': 35},
+                    {'id': 'cap', 'label': 'cap', 'count': 32},
+                    {'id': 'box', 'label': 'box', 'count': 28},
+                    {'id': 'seal', 'label': 'seal', 'count': 25},
+                    {'id': 'damage', 'label': 'damage', 'count': 22},
+                    {'id': 'spill', 'label': 'spill', 'count': 20},
+                    {'id': 'tape', 'label': 'tape', 'count': 18},
+                    {'id': 'wrapped', 'label': 'wrapped', 'count': 16},
+                    {'id': 'cracked', 'label': 'cracked', 'count': 15},
+                    {'id': 'bag', 'label': 'bag', 'count': 14},
+                    {'id': 'tin', 'label': 'tin', 'count': 13},
+                    {'id': 'mess', 'label': 'mess', 'count': 12},
+                    {'id': 'broke', 'label': 'broke', 'count': 11},
+                    {'id': 'size', 'label': 'size', 'count': 10},
+                    {'id': 'clean', 'label': 'clean', 'count': 9},
+                    {'id': 'can', 'label': 'can', 'count': 8},
+                    {'id': 'leaked', 'label': 'leaked', 'count': 7},
+                    {'id': 'secured', 'label': 'secured', 'count': 6},
+                    {'id': 'top', 'label': 'top', 'count': 5},
+                    {'id': 'large', 'label': 'large', 'count': 4},
+                    {'id': 'color', 'label': 'color', 'count': 3},
+                    {'id': 'secure', 'label': 'secure', 'count': 2},
+                    {'id': 'cover', 'label': 'cover', 'count': 1}
                 ],
                 'links': [
-                    {'source': 'bottle', 'target': 'leak', 'weight': 4},
-                    {'source': 'bottle', 'target': 'cap', 'weight': 3},
-                    {'source': 'package', 'target': 'box', 'weight': 3},
-                    {'source': 'package', 'target': 'seal', 'weight': 2},
-                    {'source': 'container', 'target': 'bottle', 'weight': 2},
-                    {'source': 'leak', 'target': 'spill', 'weight': 2},
-                    {'source': 'damage', 'target': 'package', 'weight': 2},
-                    {'source': 'seal', 'target': 'tape', 'weight': 1},
-                    {'source': 'box', 'target': 'container', 'weight': 1},
-                    {'source': 'cap', 'target': 'leak', 'weight': 1}
+                    {'source': 'bottle', 'target': 'leak', 'weight': 5},
+                    {'source': 'bottle', 'target': 'cap', 'weight': 4},
+                    {'source': 'package', 'target': 'box', 'weight': 4},
+                    {'source': 'package', 'target': 'seal', 'weight': 3},
+                    {'source': 'container', 'target': 'bottle', 'weight': 3},
+                    {'source': 'leak', 'target': 'spill', 'weight': 3},
+                    {'source': 'damage', 'target': 'package', 'weight': 3},
+                    {'source': 'seal', 'target': 'tape', 'weight': 2},
+                    {'source': 'box', 'target': 'container', 'weight': 2},
+                    {'source': 'cap', 'target': 'leak', 'weight': 2},
+                    {'source': 'wrapped', 'target': 'package', 'weight': 2},
+                    {'source': 'cracked', 'target': 'damage', 'weight': 2},
+                    {'source': 'bag', 'target': 'container', 'weight': 2},
+                    {'source': 'tin', 'target': 'container', 'weight': 2},
+                    {'source': 'mess', 'target': 'spill', 'weight': 2},
+                    {'source': 'broke', 'target': 'damage', 'weight': 2},
+                    {'source': 'size', 'target': 'large', 'weight': 1},
+                    {'source': 'clean', 'target': 'package', 'weight': 1},
+                    {'source': 'can', 'target': 'container', 'weight': 1},
+                    {'source': 'leaked', 'target': 'leak', 'weight': 1},
+                    {'source': 'secured', 'target': 'seal', 'weight': 1},
+                    {'source': 'top', 'target': 'cap', 'weight': 1},
+                    {'source': 'color', 'target': 'package', 'weight': 1},
+                    {'source': 'secure', 'target': 'seal', 'weight': 1},
+                    {'source': 'cover', 'target': 'cap', 'weight': 1}
                 ]
             }
         
