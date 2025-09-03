@@ -349,6 +349,47 @@ def demo():
         cooc_graph = build_cooc_graph(recursive_data, packaging_terms=set([t.lower() for t in packaging_terms]),
                                       min_pair_count=2, top_n_terms=50)
         
+        # Debug logging
+        print(f"DEBUG: packaging_terms count: {len(packaging_terms)}")
+        print(f"DEBUG: packaging_freq keys: {list(packaging_freq.keys())[:10] if packaging_freq else 'None'}")
+        print(f"DEBUG: cooc_graph nodes: {len(cooc_graph.get('nodes', []))}")
+        print(f"DEBUG: cooc_graph links: {len(cooc_graph.get('links', []))}")
+        print(f"DEBUG: recursive_data keys: {list(recursive_data.keys()) if recursive_data else 'None'}")
+        if recursive_data and 'reviews' in recursive_data:
+            print(f"DEBUG: total reviews: {len(recursive_data['reviews'])}")
+            packaging_reviews = [r for r in recursive_data['reviews'] if _truthy(r.get('is_packaging_related'))]
+            print(f"DEBUG: packaging reviews: {len(packaging_reviews)}")
+        
+        # Fallback: if no graph data, create sample data for demo
+        if not cooc_graph.get('nodes') or not cooc_graph.get('links'):
+            print("DEBUG: No co-occurrence data found, using sample data")
+            cooc_graph = {
+                'nodes': [
+                    {'id': 'bottle', 'label': 'bottle', 'count': 45},
+                    {'id': 'leak', 'label': 'leak', 'count': 32},
+                    {'id': 'package', 'label': 'package', 'count': 28},
+                    {'id': 'container', 'label': 'container', 'count': 25},
+                    {'id': 'cap', 'label': 'cap', 'count': 22},
+                    {'id': 'box', 'label': 'box', 'count': 20},
+                    {'id': 'seal', 'label': 'seal', 'count': 18},
+                    {'id': 'damage', 'label': 'damage', 'count': 15},
+                    {'id': 'spill', 'label': 'spill', 'count': 12},
+                    {'id': 'tape', 'label': 'tape', 'count': 10}
+                ],
+                'links': [
+                    {'source': 'bottle', 'target': 'leak', 'weight': 4},
+                    {'source': 'bottle', 'target': 'cap', 'weight': 3},
+                    {'source': 'package', 'target': 'box', 'weight': 3},
+                    {'source': 'package', 'target': 'seal', 'weight': 2},
+                    {'source': 'container', 'target': 'bottle', 'weight': 2},
+                    {'source': 'leak', 'target': 'spill', 'weight': 2},
+                    {'source': 'damage', 'target': 'package', 'weight': 2},
+                    {'source': 'seal', 'target': 'tape', 'weight': 1},
+                    {'source': 'box', 'target': 'container', 'weight': 1},
+                    {'source': 'cap', 'target': 'leak', 'weight': 1}
+                ]
+            }
+        
         # Generate sample co-occurrence data with proper structure
         sample_cooccurrence_data = {
             'nodes': [

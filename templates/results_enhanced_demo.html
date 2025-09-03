@@ -2707,14 +2707,30 @@
             console.log('Co-occurrence base data:', coocBase);
             console.log('Nodes count:', coocBase.nodes?.length || 0);
             console.log('Links count:', coocBase.links?.length || 0);
+            console.log('D3 available:', typeof d3 !== 'undefined');
+            console.log('SVG element:', modal.querySelector("#cooc-svg"));
+            
+            if (!coocBase.nodes || coocBase.nodes.length === 0) {
+                console.error('No nodes in co-occurrence data!');
+            }
+            if (!coocBase.links || coocBase.links.length === 0) {
+                console.error('No links in co-occurrence data!');
+            }
+            
             initCoocNetwork(coocBase, modal);
         }
         
         // Bulletproof D3 co-occurrence network implementation
         function initCoocNetwork(base, modal) {
+            console.log('initCoocNetwork called with:', base);
             const baseGraph = base || {nodes:[], links:[]};
+            console.log('baseGraph:', baseGraph);
             const svg = d3.select(modal.querySelector("#cooc-svg"));
-            if (!svg.node()) return;
+            console.log('SVG element found:', !!svg.node());
+            if (!svg.node()) {
+                console.error('SVG element not found!');
+                return;
+            }
 
             const width = 900;
             const height = 540;
