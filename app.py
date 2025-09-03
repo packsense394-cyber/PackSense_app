@@ -1565,9 +1565,7 @@ def chat():
     lm = user_msg.lower()
     reply = None
     
-    print(f"Chat request received: {user_msg}")
-    print(f"Number of reviews: {len(reviews)}")
-    print(f"All text length: {len(all_text)}")
+
 
     # 1) Greeting
     if lm in ("hi", "hello"):
@@ -1706,7 +1704,6 @@ def chat():
             "Sorry, I didn't get that. Type `help` to see what I can do."
         )
 
-    print(f"Chat response: {reply}")
     return jsonify(reply=reply)
 
 def scheduled_scrape():
