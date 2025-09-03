@@ -1876,103 +1876,115 @@
             hydrateSelect('packaging-filter', window.packagingTerms || []);
         });
 
-        // Dependency-free wordcloud renderer (fallback)
-        (function(){
+        // Neon word cloud renderer (matching localhost design)
+        (function renderNeonCloud(){
             const freqObj = window.packagingFreq || {};
-            const entries = Object.entries(freqObj).filter(([k,v]) => !!k && Number(v) > 0);
+            const entries = Object.entries(freqObj).filter(([k,v]) => k && Number(v)>0);
+            const el = document.getElementById('wordcloud');
+            if (!el) return;
 
-            const container = document.getElementById('wordcloud');
-            if (!container) return;
+            // background beams (subtle)
+            el.style.background =
+                'radial-gradient(900px 300px at 85% 25%, rgba(0,255,240,.06), transparent),' +
+                'radial-gradient(900px 300px at 20% 75%, rgba(255,0,160,.05), transparent),' +
+                'linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01))';
 
-            if (entries.length === 0) {
-                container.innerHTML = '<div style="color:#bbb;display:flex;height:100%;align-items:center;justify-content:center;">No packaging keywords available</div>';
+            if (!entries.length){
+                el.innerHTML = '<div style="color:#bfc7cf;display:flex;height:100%;align-items:center;justify-content:center;">No packaging keywords available</div>';
                 return;
             }
 
-            // sort by count so big terms are placed first
-            entries.sort((a,b) => b[1] - a[1]);
+            // sort by weight and clamp to top-N if needed
+            entries.sort((a,b)=>b[1]-a[1]);
+            const TOP_N = 28;
+            const data = entries.slice(0, TOP_N);
 
-            const counts = entries.map(e => Number(e[1]));
+            const counts = data.map(d=>Number(d[1]));
             const minC = Math.min(...counts), maxC = Math.max(...counts);
-
-            // font size scale (px)
             const size = c => {
-                if (maxC === minC) return 24;
-                const t = (c - minC) / (maxC - minC);
-                return Math.round(14 + t * 46); // 14–60px
+                if (maxC===minC) return 26;
+                const t = (c-minC)/(maxC-minC);
+                return Math.round(18 + t*48); // 18–66px
             };
 
-            // pastel-ish pill styles
-            const pill = (text, px) => {
-                const el = document.createElement('div');
-                el.textContent = text;
-                el.style.position = 'absolute';
-                el.style.fontWeight = '700';
-                el.style.fontSize = px + 'px';
-                el.style.padding = '6px 14px';
-                el.style.borderRadius = '999px';
-                el.style.backdropFilter = 'blur(2px)';
-                el.style.boxShadow = '0 4px 18px rgba(0,0,0,0.15)';
-                el.style.border = '1px solid rgba(255,255,255,0.2)';
-                el.style.whiteSpace = 'nowrap';
-                // random-ish neon palette without specifying exact colors
-                el.style.background = 'rgba(255,255,255,0.08)';
-                el.style.color = '#e6e6e6';
-                return el;
-            };
+            // neon palette (H,S,L) -> we'll build gradients + glow
+            const PALETTE = [
+                [192,95,55],  // cyan
+                [285,90,62],  // purple
+                [118,92,48],  // green
+                [15,96,60],   // orange
+                [0,88,58],    // red
+                [330,86,64],  // magenta
+            ];
+            const colorFor = i => PALETTE[i % PALETTE.length];
 
-            // grid placement (avoids overlap without heavy libs)
-            const W = container.clientWidth;
-            const H = container.clientHeight;
-            const cols = 8, rows = 5;                   // tweak for density
-            const cellW = W / cols, cellH = H / rows;
-            const taken = new Set();
+            function pill(word, px, i){
+                const [h,s,l] = colorFor(i);
+                const c1 = `hsl(${h} ${s}% ${Math.max(30, l-18)}%)`;
+                const c2 = `hsl(${h} ${s}% ${Math.min(70, l+4)}%)`;
+                const br = `hsl(${h} ${s}% ${Math.min(85, l+18)}% / .55)`;
+                const glow1 = `0 0 2px hsl(${h} 100% 90% / .9)`;
+                const glow2 = `0 0 18px hsl(${h} 98% 65% / .65)`;
+                const glow3 = `0 0 42px hsl(${h} 98% 55% / .35)`;
 
-            function place(el, col, row) {
-                const x = Math.round(col * cellW + (cellW - el.offsetWidth) / 2);
-                const y = Math.round(row * cellH + (cellH - el.offsetHeight) / 2);
-                el.style.left = Math.max(6, Math.min(W - el.offsetWidth - 6, x)) + 'px';
-                el.style.top  = Math.max(6, Math.min(H - el.offsetHeight - 6, y)) + 'px';
+                const d = document.createElement('div');
+                d.textContent = word;
+                d.style.position   = 'absolute';
+                d.style.fontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto';
+                d.style.fontWeight = '800';
+                d.style.letterSpacing = '.5px';
+                d.style.fontSize  = px + 'px';
+                d.style.padding   = '8px 18px';
+                d.style.borderRadius = '14px';
+                d.style.color     = '#fff';
+                d.style.background= `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`;
+                d.style.border    = `1px solid ${br}`;
+                d.style.boxShadow = `${glow1}, ${glow2}, inset 0 0 18px rgba(255,255,255,.06), ${glow3}`;
+                d.style.textShadow= '0 2px 10px rgba(0,0,0,.35)';
+                d.style.userSelect= 'none';
+                d.style.transform = `rotate(${(Math.random()-.5)*4}deg)`; // tiny rotation
+                d.style.transition= 'transform .15s ease, box-shadow .15s ease, filter .15s ease';
+                d.onmouseenter = ()=>{ d.style.filter='brightness(1.07)'; d.style.transform+=' scale(1.03)';};
+                d.onmouseleave = ()=>{ d.style.filter=''; d.style.transform=d.style.transform.replace(' scale(1.03)','');};
+                return d;
             }
 
-            // scatter big words first, then smaller ones
-            entries.forEach(([word, c], i) => {
-                const px = size(c);
-                const el = pill(word, px);
-                container.appendChild(el);          // must attach to measure size
+            // clear & place
+            el.innerHTML = '';
+            const W = el.clientWidth, H = el.clientHeight;
+            const cols = 10, rows = 5;
+            const cellW = W/cols, cellH = H/rows;
+            const taken = new Set();
 
-                // choose a free-ish grid cell
-                let tries = 0, col = 0, row = 0;
-                do {
-                    // weighted center bias for larger words
-                    const bias = Math.max(0, 1 - (px / 60));
-                    const rc = Math.random();
-                    col = Math.floor((rc * bias + (1 - bias) * 0.5) * cols);
-                    row = Math.floor((Math.random() * bias + (1 - bias) * 0.5) * rows);
+            // big words first
+            data.forEach(([w,c], idx)=>{
+                const px = size(Number(c));
+                const p  = pill(w, px, idx);
+                el.appendChild(p); // append to measure
+
+                let tries=0, col=0, row=0;
+                do{
+                    // bias toward center for bigger words
+                    const bias = Math.max(0, 1 - (px/66));
+                    const r1 = Math.random(), r2 = Math.random();
+                    col = Math.floor((r1*bias + (1-bias)*0.5)*cols);
+                    row = Math.floor((r2*bias + (1-bias)*0.5)*rows);
                     tries++;
-                } while (taken.has(`${col},${row}`) && tries < 30);
-
+                } while(taken.has(`${col},${row}`) && tries<50);
                 taken.add(`${col},${row}`);
-                place(el, col, row);
+
+                const x = Math.round(col*cellW + (cellW - p.offsetWidth)/2);
+                const y = Math.round(row*cellH + (cellH - p.offsetHeight)/2);
+                p.style.left = Math.max(8, Math.min(W - p.offsetWidth - 8, x)) + 'px';
+                p.style.top  = Math.max(8, Math.min(H - p.offsetHeight - 8, y)) + 'px';
             });
 
-            // handle resize
-            let rAF = null;
-            window.addEventListener('resize', () => {
-                cancelAnimationFrame(rAF);
-                rAF = requestAnimationFrame(() => {
-                    const W2 = container.clientWidth, H2 = container.clientHeight;
-                    const cellW2 = W2 / cols, cellH2 = H2 / rows;
-                    Array.from(container.children).forEach((el, idx) => {
-                        const key = Array.from(taken)[idx] || '0,0';
-                        const [c, r] = key.split(',').map(Number);
-                        const x = Math.round(c * cellW2 + (cellW2 - el.offsetWidth) / 2);
-                        const y = Math.round(r * cellH2 + (cellH2 - el.offsetHeight) / 2);
-                        el.style.left = Math.max(6, Math.min(W2 - el.offsetWidth - 6, x)) + 'px';
-                        el.style.top  = Math.max(6, Math.min(H2 - el.offsetHeight - 6, y)) + 'px';
-                    });
-                });
-            });
+            // responsive
+            let raf=null;
+            window.addEventListener('resize', ()=> {
+                cancelAnimationFrame(raf);
+                raf = requestAnimationFrame(renderNeonCloud);
+            }, {once:true});
         })();
         
         // Update visible count

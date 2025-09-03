@@ -173,58 +173,44 @@ def demo():
             except Exception:
                 return 0.0
 
-        # Generate packaging_freq from actual data structure
-        packaging_freq = {}
-        
-        # Method 1: Try to get from packaging_freq field (if it exists)
-        raw_freq = (recursive_data or {}).get("packaging_freq", {})
-        if isinstance(raw_freq, dict) and raw_freq:
-            packaging_freq = {str(k): to_num(v) for k, v in raw_freq.items()}
-        elif isinstance(raw_freq, list) and raw_freq:
-            for item in raw_freq:
-                if isinstance(item, dict):
-                    key = str(item.get("keyword") or item.get("term") or item.get("key") or "").strip()
-                    val = to_num(item.get("count") or item.get("value") or item.get("freq") or 0)
-                    if key:
+        # Generate packaging_freq from actual data structure (packaging-only subset)
+        def _truthy(x):
+            if isinstance(x, bool): 
+                return x
+            s = str(x or "").strip().lower()
+            return s in {"true", "1", "yes", "y"}
+
+        # 1) Use the packaging flag in reviews to compute the KPI (don't infer)
+        packaging_reviews = [r for r in cleaned_reviews if _truthy(r.get("is_packaging_related"))]
+
+        # 2) Prefer precomputed packaging_freq from JSON; otherwise derive from keyword_sentence_map
+        raw_pf = (recursive_data or {}).get("packaging_freq")
+        ksm = (recursive_data or {}).get("keyword_sentence_map")
+
+        if isinstance(raw_pf, dict) and raw_pf:
+            packaging_freq = {str(k): to_num(v) for k, v in raw_pf.items()}
+        elif isinstance(raw_pf, list) and raw_pf:
+            packaging_freq = {}
+            for it in raw_pf:
+                if isinstance(it, dict):
+                    key = str(it.get("keyword") or it.get("term") or it.get("key") or "").strip()
+                    val = to_num(it.get("count") or it.get("value") or it.get("freq") or 0)
+                    if key: 
                         packaging_freq[key] = packaging_freq.get(key, 0) + val
-        
-        # Method 2: If no packaging_freq, generate from search_term counts in reviews
-        if not packaging_freq:
+        elif isinstance(ksm, dict) and ksm:
+            packaging_freq = {str(k): len(v or []) for k, v in ksm.items()}
+        else:
+            # Generate from search_term counts in packaging-related reviews only
             from collections import Counter
             search_terms = Counter()
             
-            # Count search_term occurrences in all reviews
-            for review in cleaned_reviews:
+            # Count search_term occurrences in packaging-related reviews only
+            for review in packaging_reviews:
                 search_term = review.get('search_term', '').strip()
                 if search_term:
                     search_terms[search_term] += 1
             
-            # Convert to dict with proper counts
             packaging_freq = dict(search_terms)
-        
-        # Method 3: If still empty, use packaging_terms_searched with sample counts
-        if not packaging_freq:
-            packaging_terms = recursive_data.get('packaging_terms_searched', [])
-            if packaging_terms:
-                # Generate sample counts based on term importance
-                sample_counts = {
-                    'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
-                    'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
-                    'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
-                }
-                packaging_freq = {}
-                for term in packaging_terms:
-                    if term in sample_counts:
-                        packaging_freq[term] = sample_counts[term]
-                    else:
-                        packaging_freq[term] = 1  # Default count for other terms
-            else:
-                # Final fallback
-                packaging_freq = {
-                    'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
-                    'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
-                    'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
-                }
         
         # Generate sample component frequency data
         sample_component_freq = {
@@ -319,19 +305,15 @@ def demo():
         # Debug: Print review counts to understand the data
         print(f"Demo Debug - Total reviews loaded: {len(reviews_full)}")
         print(f"Demo Debug - Total reviews extracted: {total_reviews_count}")
+        print(f"Demo Debug - Packaging reviews count: {len(packaging_reviews)}")
         
         def _norm(s): 
             return str(s or "").strip().lower()
         
-        def _truthy(x):
-            if isinstance(x, bool): 
-                return x
-            return _norm(x) in {"true", "1", "yes", "y"}
-        
         pos = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("pos"))
         neu = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neu"))
         neg = sum(1 for r in reviews_full if _norm(r.get("sentiment", "")).startswith("neg"))
-        pack = sum(1 for r in reviews_full if _truthy(r.get("is_packaging_related")))
+        pack = len(packaging_reviews)  # Use actual packaging reviews count
         
         # Debug: Print sentiment counts
         print(f"Demo Debug - Sentiment counts: pos={pos}, neu={neu}, neg={neg}, pack={pack}")
