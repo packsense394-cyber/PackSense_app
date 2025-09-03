@@ -2842,42 +2842,192 @@
                 function dragged(ev,d){ d.fx=ev.x; d.fy=ev.y; }
                 function dragended(ev,d){ if(!ev.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }
 
+                // Store D3 elements globally for filtering
+                window.d3Elements = { 
+                    node: nodeAll, 
+                    link: linkAll, 
+                    label: nodeEnter.selectAll('text'), 
+                    simulation: sim 
+                };
+
                 stats.set(graph.nodes.length, graph.links.length);
             }
 
-            // slider wiring
+            // Copy exact filtering system from localhost
+            let minStrength = 1;
+            let minConnections = 1;
+            let filterTimeout;
+            const filterDelay = 100; // ms
+
+            // Store D3 elements globally so updateGraphVisibility can access them
+            window.d3Elements = { node: null, link: null, label: null, simulation: null };
+            window.currentNodes = baseGraph.nodes;
+            window.currentLinks = baseGraph.links;
+
+            // Global filter application function (copied from localhost)
+            window.applyFilters = function() {
+                console.log(`Applying filters: minStrength=${minStrength}, minConnections=${minConnections}`);
+                
+                // Step 1: Filter nodes by connection count
+                const connectionFilteredNodes = window.currentNodes.filter(node => {
+                    const connectionCount = window.currentLinks.filter(link => 
+                        (link.source.id || link.source) === node.id || 
+                        (link.target.id || link.target) === node.id
+                    ).length;
+                    
+                    const isVisible = connectionCount >= minConnections;
+                    if (!isVisible) {
+                        console.log(`Node "${node.name || node.id}" filtered out: ${connectionCount} connections < ${minConnections}`);
+                    }
+                    return isVisible;
+                });
+                
+                console.log(`Connection filtering: ${window.currentNodes.length} → ${connectionFilteredNodes.length} nodes`);
+                
+                // Step 2: Filter edges to only include those between visible nodes
+                const visibleNodeIds = new Set(connectionFilteredNodes.map(n => n.id));
+                const visibleLinks = window.currentLinks.filter(link => 
+                    visibleNodeIds.has(link.source.id || link.source) && 
+                    visibleNodeIds.has(link.target.id || link.target)
+                );
+                
+                console.log(`Edge filtering: ${window.currentLinks.length} → ${visibleLinks.length} edges`);
+                
+                // Step 3: Compute normalization on this edge set
+                if (visibleLinks.length === 0) {
+                    console.log('No connections match filters - rendering empty state');
+                    if (window.updateGraphVisibility) {
+                        window.updateGraphVisibility([], []);
+                    }
+                    return;
+                }
+                
+                const weights = visibleLinks.map(l => l.weight);
+                const wMin = Math.min(...weights);
+                const wMax = Math.max(...weights);
+                
+                console.log(`Edge weight range: min=${wMin}, max=${wMax}`);
+                
+                // Step 4: Filter edges by normalized strength
+                const strengthThreshold = minStrength <= 1 ? 0 : Math.floor(minStrength);
+                console.log(`Strength threshold: ${strengthThreshold}`);
+                
+                const strengthFilteredLinks = visibleLinks.filter(link => {
+                    let normalizedStrength;
+                    if (wMax === wMin) {
+                        normalizedStrength = 3.0; // All edges have same weight
+                    } else {
+                        normalizedStrength = 1 + 4 * (link.weight - wMin) / (wMax - wMin);
+                    }
+                    
+                    const isVisible = normalizedStrength >= strengthThreshold;
+                    if (!isVisible) {
+                        console.log(`Link filtered out: ${link.source.id || link.source} -> ${link.target.id || link.target}, weight=${link.weight}, normalized=${normalizedStrength.toFixed(2)} < threshold=${strengthThreshold}`);
+                    }
+                    return isVisible;
+                });
+                
+                console.log(`Strength filtering: ${visibleLinks.length} → ${strengthFilteredLinks.length} edges`);
+                
+                // Step 5: Drop nodes with degree 0 after edge filtering
+                const finalVisibleNodes = connectionFilteredNodes.filter(node => {
+                    const hasConnections = strengthFilteredLinks.some(link => 
+                        (link.source.id || link.source) === node.id || 
+                        (link.target.id || link.target) === node.id
+                    );
+                    if (!hasConnections) {
+                        console.log(`Node "${node.name || node.id}" dropped: no connections after edge filtering`);
+                    }
+                    return hasConnections;
+                });
+                
+                console.log(`Final result: ${finalVisibleNodes.length} nodes, ${strengthFilteredLinks.length} edges`);
+                
+                // Update the graph with final filtered data
+                if (window.updateGraphVisibility) {
+                    window.updateGraphVisibility(finalVisibleNodes, strengthFilteredLinks);
+                }
+            };
+            
+            // Debounced filter application
+            window.debouncedApplyFilters = function() {
+                console.log('debouncedApplyFilters called, setting timeout...');
+                clearTimeout(filterTimeout);
+                filterTimeout = setTimeout(() => {
+                    console.log('Timeout fired, calling applyFilters...');
+                    window.applyFilters();
+                }, filterDelay);
+            };
+
+            // Slider event handlers (copied from localhost)
             const weightEl = modal.querySelector('#min-link-weight');
             const degreeEl = modal.querySelector('#min-degree');
             const weightValueEl = modal.querySelector('#weight-value');
             const degreeValueEl = modal.querySelector('#degree-value');
             
-            function rerender(){ 
-                const weight = +weightEl?.value || 1;
-                const degree = +degreeEl?.value || 1;
-                console.log('Rerendering with weight:', weight, 'degree:', degree);
-                draw(weight, degree);
+            if (weightEl) {
+                weightEl.addEventListener('input', function() {
+                    minStrength = parseFloat(this.value);
+                    if (weightValueEl) weightValueEl.textContent = minStrength.toString();
+                    console.log(`Link weight slider changed to: ${minStrength}`);
+                    window.debouncedApplyFilters();
+                });
             }
-
-            function updateSliderValues() {
-                if (weightValueEl && weightEl) {
-                    weightValueEl.textContent = weightEl.value;
-                }
-                if (degreeValueEl && degreeEl) {
-                    degreeValueEl.textContent = degreeEl.value;
-                }
-            }
-
-            weightEl?.addEventListener('input', function() {
-                updateSliderValues();
-                rerender();
-            });
-            degreeEl?.addEventListener('input', function() {
-                updateSliderValues();
-                rerender();
-            });
             
-            // Initialize slider values
-            updateSliderValues();
+            if (degreeEl) {
+                degreeEl.addEventListener('input', function() {
+                    minConnections = parseInt(this.value);
+                    if (degreeValueEl) degreeValueEl.textContent = minConnections.toString();
+                    console.log(`Connections slider changed to: ${minConnections}`);
+                    window.debouncedApplyFilters();
+                });
+            }
+
+            // Add updateGraphVisibility function (copied from localhost)
+            window.updateGraphVisibility = function(visibleNodes, visibleLinks) {
+                console.log('Updating graph visibility:', { visibleNodes: visibleNodes?.length || 0, visibleLinks: visibleLinks?.length || 0 });
+                
+                // Special case: if both parameters are null, show everything (reset state)
+                if (visibleNodes === null && visibleLinks === null) {
+                    console.log('Reset state - showing all nodes and links');
+                    visibleNodes = window.currentNodes;
+                    visibleLinks = window.currentLinks;
+                }
+                
+                // Update D3 elements if they exist
+                if (window.d3Elements && window.d3Elements.node) {
+                    // Update nodes
+                    window.d3Elements.node
+                        .data(visibleNodes, d => d.id)
+                        .style('opacity', 1)
+                        .style('display', 'block');
+                    
+                    // Update links
+                    window.d3Elements.link
+                        .data(visibleLinks, d => `${d.source.id || d.source}-${d.target.id || d.target}`)
+                        .style('opacity', 1)
+                        .style('display', 'block');
+                    
+                    // Update labels
+                    if (window.d3Elements.label) {
+                        window.d3Elements.label
+                            .data(visibleNodes, d => d.id)
+                            .style('opacity', 1)
+                            .style('display', 'block');
+                    }
+                    
+                    // Restart simulation with new data
+                    if (window.d3Elements.simulation) {
+                        window.d3Elements.simulation
+                            .nodes(visibleNodes)
+                            .force('link').links(visibleLinks);
+                        window.d3Elements.simulation.alpha(0.3).restart();
+                    }
+                }
+                
+                // Update stats
+                stats.set(visibleNodes.length, visibleLinks.length);
+            };
 
             rerender(); // initial draw
         }
