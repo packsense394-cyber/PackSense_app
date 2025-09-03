@@ -1091,7 +1091,7 @@
                     <label>Filter by Packaging Terms:</label>
                     <select id="packaging-filter">
                         <option value="">-- Select packaging term --</option>
-                        {% for term in packaging_dropdown_data %}
+                        {% for term in packaging_terms %}
                         <option value="{{ term }}">{{ term }}</option>
                         {% endfor %}
                     </select>
@@ -1178,6 +1178,7 @@
 
             <script>
                 window.packagingFreq = {{ packaging_freq | default({}) | tojson }};
+                window.packagingTerms = {{ packaging_terms | default([]) | tojson }};
             </script>
 
             <!-- Reviews Section -->
@@ -1852,6 +1853,27 @@
         // Initialize word cloud when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             generateWordCloud();
+        });
+
+        // Client-side safety net for dropdowns
+        function hydrateSelect(id, items) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const hasRealOptions = Array.from(el.options).some(o => o.value && !o.disabled);
+            if (!hasRealOptions && items && items.length > 0) {
+                items.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t; 
+                    opt.textContent = t;
+                    el.appendChild(opt);
+                });
+            }
+        }
+
+        // Populate dropdowns on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            hydrateSelect('keyword-freq-select', window.packagingTerms || []);
+            hydrateSelect('packaging-filter', window.packagingTerms || []);
         });
 
         // Dependency-free wordcloud renderer (fallback)

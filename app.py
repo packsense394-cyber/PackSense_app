@@ -173,26 +173,58 @@ def demo():
             except Exception:
                 return 0.0
 
+        # Generate packaging_freq from actual data structure
+        packaging_freq = {}
+        
+        # Method 1: Try to get from packaging_freq field (if it exists)
         raw_freq = (recursive_data or {}).get("packaging_freq", {})
-
-        # Accept both {"word": count} and [{"keyword": "...", "count": ...}] shapes
-        if isinstance(raw_freq, dict):
+        if isinstance(raw_freq, dict) and raw_freq:
             packaging_freq = {str(k): to_num(v) for k, v in raw_freq.items()}
-        elif isinstance(raw_freq, list):
-            packaging_freq = {}
+        elif isinstance(raw_freq, list) and raw_freq:
             for item in raw_freq:
                 if isinstance(item, dict):
                     key = str(item.get("keyword") or item.get("term") or item.get("key") or "").strip()
                     val = to_num(item.get("count") or item.get("value") or item.get("freq") or 0)
                     if key:
                         packaging_freq[key] = packaging_freq.get(key, 0) + val
-        else:
-            # Fallback to sample data if no real data
-            packaging_freq = {
-                'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
-                'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
-                'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
-            }
+        
+        # Method 2: If no packaging_freq, generate from search_term counts in reviews
+        if not packaging_freq:
+            from collections import Counter
+            search_terms = Counter()
+            
+            # Count search_term occurrences in all reviews
+            for review in cleaned_reviews:
+                search_term = review.get('search_term', '').strip()
+                if search_term:
+                    search_terms[search_term] += 1
+            
+            # Convert to dict with proper counts
+            packaging_freq = dict(search_terms)
+        
+        # Method 3: If still empty, use packaging_terms_searched with sample counts
+        if not packaging_freq:
+            packaging_terms = recursive_data.get('packaging_terms_searched', [])
+            if packaging_terms:
+                # Generate sample counts based on term importance
+                sample_counts = {
+                    'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
+                    'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
+                    'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
+                }
+                packaging_freq = {}
+                for term in packaging_terms:
+                    if term in sample_counts:
+                        packaging_freq[term] = sample_counts[term]
+                    else:
+                        packaging_freq[term] = 1  # Default count for other terms
+            else:
+                # Final fallback
+                packaging_freq = {
+                    'bottle': 45, 'container': 32, 'package': 28, 'box': 25, 'cap': 22,
+                    'lid': 18, 'plastic': 15, 'seal': 12, 'tape': 10, 'design': 8,
+                    'leak': 6, 'broken': 5, 'mess': 4, 'spill': 3, 'crack': 2
+                }
         
         # Generate sample component frequency data
         sample_component_freq = {
@@ -223,6 +255,9 @@ def demo():
         
         # Generate sample keyword frequencies (same as packaging_freq for demo)
         sample_keyword_frequencies = packaging_freq
+        
+        # Generate packaging_terms list for dropdowns
+        packaging_terms = sorted(packaging_freq.keys()) if packaging_freq else []
         
         # Generate sample co-occurrence data with proper structure
         sample_cooccurrence_data = {
@@ -342,6 +377,7 @@ def demo():
                 'neutral': neu
             },
             'packaging_freq': packaging_freq,
+            'packaging_terms': packaging_terms,
             'component_freq': sample_component_freq,
             'condition_freq': sample_condition_freq,
             'keyword_sentence_map': {},
