@@ -1225,10 +1225,6 @@
             <script>
                 window.packagingFreq = {{ packaging_freq | default({}) | tojson }};
                 window.packagingTerms = {{ packaging_terms | default([]) | tojson }};
-                
-                console.log('Template data loaded:');
-                console.log('packaging_freq:', window.packagingFreq);
-                console.log('packaging_terms:', window.packagingTerms);
             </script>
 
             <!-- Reviews Section -->
@@ -2002,7 +1998,7 @@
         }
 
         // Neon word cloud renderer (matching localhost design)
-        window.renderNeonCloud = function(){
+        (function renderNeonCloud(){
             const freqObj = window.packagingFreq || {};
             const entries = Object.entries(freqObj).filter(([k,v]) => k && Number(v)>0);
             const el = document.getElementById('wordcloud');
@@ -2220,16 +2216,9 @@
             let raf=null;
             window.addEventListener('resize', ()=> {
                 cancelAnimationFrame(raf);
-                raf = requestAnimationFrame(window.renderNeonCloud);
+                raf = requestAnimationFrame(renderNeonCloud);
             }, {once:true});
-        };
-        
-        // Call the word cloud renderer after DOM is loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', window.renderNeonCloud);
-        } else {
-            window.renderNeonCloud();
-        }
+        })();
         
         // Update visible count
         function updateVisibleCount() {
@@ -2312,9 +2301,8 @@
         }
 
         // Co-occurrence network
-        window.showCooccurrenceNetwork = function() {
+        function showCooccurrenceNetwork() {
             console.log('showCooccurrenceNetwork function called!');
-            console.log('D3 available:', typeof d3 !== 'undefined');
             
             // Get co-occurrence data
             let cooccurrenceData = {};
@@ -4370,9 +4358,8 @@
         }
 
         // Mark defective parts
-        window.markDefectiveParts = function() {
+        function markDefectiveParts() {
             console.log('markDefectiveParts function called!');
-            console.log('Function is accessible from global scope');
             
             // Test with sample data first
             let defectPairs = [
