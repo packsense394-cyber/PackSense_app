@@ -1915,8 +1915,14 @@
                 [15,96,60],   // orange
                 [0,88,58],    // red
                 [330,86,64],  // magenta
+                [60,95,55],   // yellow
+                [240,90,55],  // blue
+                [300,85,60],  // pink
+                [30,95,55],   // orange-red
             ];
-            const colorFor = i => PALETTE[i % PALETTE.length];
+            // Shuffle palette for more random color distribution
+            const shuffledPalette = [...PALETTE].sort(() => Math.random() - 0.5);
+            const colorFor = i => shuffledPalette[i % shuffledPalette.length];
 
             function pill(word, px, i){
                 const [h,s,l] = colorFor(i);
@@ -1949,34 +1955,88 @@
                 return d;
             }
 
-            // clear & place
+            // clear & place with better spread algorithm
             el.innerHTML = '';
             const W = el.clientWidth, H = el.clientHeight;
-            const cols = 10, rows = 5;
-            const cellW = W/cols, cellH = H/rows;
-            const taken = new Set();
+            const placed = [];
+            const minDistance = 40; // Minimum distance between words
 
-            // big words first
+            // Function to check if a position conflicts with existing words
+            function hasConflict(x, y, width, height) {
+                for (const existing of placed) {
+                    const dx = Math.abs(x - existing.x);
+                    const dy = Math.abs(y - existing.y);
+                    if (dx < (width + existing.width) / 2 + minDistance && 
+                        dy < (height + existing.height) / 2 + minDistance) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Function to find a good position for a word
+            function findPosition(width, height) {
+                const maxAttempts = 100;
+                let attempts = 0;
+                
+                while (attempts < maxAttempts) {
+                    // Try different strategies based on attempt number
+                    let x, y;
+                    
+                    if (attempts < 30) {
+                        // First 30 attempts: random placement
+                        x = Math.random() * (W - width - 16) + 8;
+                        y = Math.random() * (H - height - 16) + 8;
+                    } else if (attempts < 60) {
+                        // Next 30 attempts: spiral from center
+                        const angle = (attempts - 30) * 0.3;
+                        const radius = (attempts - 30) * 3;
+                        x = W/2 + Math.cos(angle) * radius - width/2;
+                        y = H/2 + Math.sin(angle) * radius - height/2;
+                        x = Math.max(8, Math.min(W - width - 8, x));
+                        y = Math.max(8, Math.min(H - height - 8, y));
+                    } else {
+                        // Final attempts: grid-based with jitter
+                        const gridCols = 8;
+                        const gridRows = 6;
+                        const col = (attempts - 60) % gridCols;
+                        const row = Math.floor((attempts - 60) / gridCols) % gridRows;
+                        const cellW = (W - 16) / gridCols;
+                        const cellH = (H - 16) / gridRows;
+                        x = 8 + col * cellW + Math.random() * (cellW - width);
+                        y = 8 + row * cellH + Math.random() * (cellH - height);
+                    }
+                    
+                    if (!hasConflict(x, y, width, height)) {
+                        return { x, y };
+                    }
+                    attempts++;
+                }
+                
+                // Fallback: place at a random position even if it conflicts
+                return {
+                    x: Math.random() * (W - width - 16) + 8,
+                    y: Math.random() * (H - height - 16) + 8
+                };
+            }
+
+            // Place words with better distribution
             data.forEach(([w,c], idx)=>{
                 const px = size(Number(c));
-                const p  = pill(w, px, idx);
+                const p = pill(w, px, idx);
                 el.appendChild(p); // append to measure
 
-                let tries=0, col=0, row=0;
-                do{
-                    // bias toward center for bigger words
-                    const bias = Math.max(0, 1 - (px/66));
-                    const r1 = Math.random(), r2 = Math.random();
-                    col = Math.floor((r1*bias + (1-bias)*0.5)*cols);
-                    row = Math.floor((r2*bias + (1-bias)*0.5)*rows);
-                    tries++;
-                } while(taken.has(`${col},${row}`) && tries<50);
-                taken.add(`${col},${row}`);
-
-                const x = Math.round(col*cellW + (cellW - p.offsetWidth)/2);
-                const y = Math.round(row*cellH + (cellH - p.offsetHeight)/2);
-                p.style.left = Math.max(8, Math.min(W - p.offsetWidth - 8, x)) + 'px';
-                p.style.top  = Math.max(8, Math.min(H - p.offsetHeight - 8, y)) + 'px';
+                const pos = findPosition(p.offsetWidth, p.offsetHeight);
+                p.style.left = pos.x + 'px';
+                p.style.top = pos.y + 'px';
+                
+                // Store position for conflict checking
+                placed.push({
+                    x: pos.x,
+                    y: pos.y,
+                    width: p.offsetWidth,
+                    height: p.offsetHeight
+                });
             });
 
             // responsive
