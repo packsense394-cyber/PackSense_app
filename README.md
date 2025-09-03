@@ -69,13 +69,21 @@ PackSense is an advanced web application that analyzes Amazon product reviews to
 
 ## 🚀 Usage
 
-### Basic Analysis
+### Demo Mode (Recommended)
+1. Navigate to `/demo` for a full demonstration
+2. Explore pre-loaded sample data without scraping
+3. Test all features including co-occurrence networks and defect analysis
+4. No Amazon credentials required
+
+### Live Analysis
 1. Navigate to the home page
 2. Enter an Amazon product reviews URL
 3. Provide your Amazon credentials (for authenticated scraping)
 4. Choose analysis type:
    - **Enhanced Analysis**: Comprehensive packaging review analysis
    - **Recursive Analysis**: Multi-level review extraction strategy
+
+**Note**: Live scraping is currently paused due to Amazon's automated activity detection. Use Demo Mode to explore all features.
 
 ### Advanced Features
 
@@ -137,10 +145,13 @@ PackSense/
 
 ### Main Routes
 - `GET /` - Home page
+- `GET /demo` - Demo mode with sample data
+- `GET /demo-product` - Demo product information page
 - `POST /analyze` - Start enhanced analysis
 - `POST /recursive_analyze` - Start recursive analysis
 - `GET /results/<product_folder>` - View analysis results
 - `GET /neo4j/<product_folder>` - Neo4j graph visualization
+- `POST /chat` - AI chat assistant for review analysis
 
 ### Data Endpoints
 - `GET /api/cooccurrence/<product_folder>` - Co-occurrence data
@@ -168,7 +179,12 @@ PackSense/
 
 ## 🚨 Important Notes
 
-### Amazon Scraping
+### Current Status
+- **Live Scraping Paused**: Amazon has detected automated activity
+- **Demo Mode Available**: Full functionality with sample data at `/demo`
+- **Professional Error Handling**: Clear messaging about service status
+
+### Amazon Scraping (When Available)
 - **Authentication Required**: You need valid Amazon credentials
 - **Rate Limiting**: Built-in delays to respect Amazon's terms
 - **Headless Mode**: Option to run without browser window
