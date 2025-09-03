@@ -2757,15 +2757,30 @@
                 .range([10, 36]);
 
             function filter(minW, minDeg){
+                console.log('Filtering with minW:', minW, 'minDeg:', minDeg);
+                console.log('Base graph nodes:', baseGraph.nodes.length, 'links:', baseGraph.links.length);
+                
+                // Filter links by weight
                 const links = baseGraph.links.filter(e => (e.weight||1) >= minW);
+                console.log('Links after weight filter:', links.length);
+                
+                // Count connections for each node
                 const deg = {};
                 links.forEach(e => {
                     deg[e.source] = (deg[e.source]||0)+1;
                     deg[e.target] = (deg[e.target]||0)+1;
                 });
+                console.log('Node degrees:', deg);
+                
+                // Filter nodes by minimum connections
                 const nodes = baseGraph.nodes.filter(n => (deg[n.id]||0) >= (minDeg||0));
+                console.log('Nodes after degree filter:', nodes.length);
+                
+                // Keep only links with both ends present
                 const N = new Set(nodes.map(n=>n.id));
                 const L = links.filter(e => N.has(e.source) && N.has(e.target));
+                console.log('Final links:', L.length);
+                
                 return {nodes, links: L};
             }
 
@@ -2867,7 +2882,7 @@
             rerender(); // initial draw
         }
 
-        // Function to show reviews for a clicked node
+        // Function to show reviews for a clicked node (matching localhost format)
         function showNodeReviews(node, modal) {
             console.log('Showing reviews for node:', node);
             
@@ -2884,28 +2899,73 @@
             
             console.log(`Found ${relatedReviews.length} reviews containing "${term}"`);
             
-            // Update the info panel
+            // Update the info panel with localhost-style display
             const infoPanel = modal.querySelector('#cooc-stats');
             if (infoPanel) {
                 infoPanel.innerHTML = `
-                    <h3>Reviews for "${term}"</h3>
-                    <p>Found ${relatedReviews.length} reviews containing this term</p>
-                    <div style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
-                        ${relatedReviews.slice(0, 10).map((review, index) => `
-                            <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #007bff;">
-                                <div style="font-weight: bold; margin-bottom: 5px;">
-                                    Review ${index + 1} - Rating: ${review.rating || 'N/A'}
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 10px 0; color: #333; font-size: 18px;">${node.connections || 0} Connections</h3>
+                        <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">${node.totalWeight || 0} Total Weight</p>
+                        <p style="margin: 0; color: #666; font-size: 14px;">${relatedReviews.length} Reviews Found</p>
+                    </div>
+                    
+                    <h3 style="color: #333; margin-bottom: 15px;">${relatedReviews.length} Reviews Containing '${term}'</h3>
+                    
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        ${relatedReviews.slice(0, 20).map((review, index) => {
+                            const rating = review.rating || 5;
+                            const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                            const headline = review.headline || review.title || 'Great product';
+                            const reviewText = review.review_text || '';
+                            
+                            // Find sentence containing the term
+                            const sentences = reviewText.split(/[.!?]+/);
+                            const termSentence = sentences.find(s => s.toLowerCase().includes(term.toLowerCase()));
+                            const highlightedSentence = termSentence ? 
+                                termSentence.replace(new RegExp(`(${term})`, 'gi'), '<mark style="background: yellow; padding: 2px;">$1</mark>') : 
+                                reviewText.substring(0, 100) + '...';
+                            
+                            return `
+                                <div style="background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <div style="font-weight: bold; color: #333;">${review.reviewer_name || 'Anonymous'}</div>
+                                        <div style="color: #666; font-size: 12px;">${review.date || 'Recent'}</div>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 10px;">
+                                        <div style="color: #ffc107; font-size: 16px; margin-bottom: 5px;">${stars}</div>
+                                        <div style="font-weight: bold; color: #333; margin-bottom: 8px;">${headline}</div>
+                                    </div>
+                                    
+                                    ${termSentence ? `
+                                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e9ecef;">
+                                            <div style="font-size: 14px; line-height: 1.5; color: #333;">
+                                                ${highlightedSentence}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="font-size: 12px; color: #666;">
+                                            Sentiment: <span style="color: ${review.sentiment === 'positive' ? '#28a745' : review.sentiment === 'negative' ? '#dc3545' : '#6c757d'};">${review.sentiment || 'neutral'}</span> | 
+                                            Packaging Related: <span style="color: ${review.is_packaging_related ? '#28a745' : '#dc3545'};">${review.is_packaging_related ? 'Yes' : 'No'}</span>
+                                        </div>
+                                        <button onclick="showFullReview('${review.review_id || index}')" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                            Show Full Review
+                                        </button>
+                                    </div>
                                 </div>
-                                <div style="color: #666; font-size: 14px; line-height: 1.4;">
-                                    ${(review.review_text || '').substring(0, 200)}${(review.review_text || '').length > 200 ? '...' : ''}
-                                </div>
-                                <div style="margin-top: 8px; font-size: 12px; color: #888;">
-                                    Sentiment: ${review.sentiment || 'neutral'} | 
-                                    Packaging Related: ${review.is_packaging_related ? 'Yes' : 'No'}
-                                </div>
+                            `;
+                        }).join('')}
+                        
+                        ${relatedReviews.length > 20 ? `
+                            <div style="text-align: center; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <p style="margin: 0; color: #666;">Showing first 20 of ${relatedReviews.length} reviews</p>
+                                <button onclick="loadMoreReviews('${term}')" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
+                                    Load More Reviews
+                                </button>
                             </div>
-                        `).join('')}
-                        ${relatedReviews.length > 10 ? `<p style="text-align: center; color: #666; margin-top: 15px;">Showing first 10 of ${relatedReviews.length} reviews</p>` : ''}
+                        ` : ''}
                     </div>
                 `;
             }
