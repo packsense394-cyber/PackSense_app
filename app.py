@@ -231,7 +231,9 @@ def demo():
             'packaging_quality_score': 7.2,
             'defect_rate': 0.15,
             'customer_satisfaction': 8.1,
-            'packaging_consistency': 6.8
+            'packaging_consistency': 6.8,
+            'has_enhanced_data': True,  # This flag shows the word cloud
+            'packaging_related': packaging_related  # This is used in the template
         }
         
         # Generate sample data for other components
@@ -285,9 +287,9 @@ def demo():
         # Generate Excel file URL
         excel_url = url_for('static', filename=f'{demo_folder}/analysis_results.xlsx')
         
-        # Render using the demo template that has the correct layout
+        # Render using the exact same template as localhost
         return render_template(
-            "results_enhanced_demo.html",
+            "results_enhanced.html",
             product_name='Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
             product_description_url='/demo-product',
             kpi=kpi,
