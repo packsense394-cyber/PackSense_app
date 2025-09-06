@@ -118,7 +118,7 @@ def newest_product_folder(prefix="Tide_Ultra_Oxi_Boost", base="static"):
 
 @app.route("/demo")
 def demo():
-    """Demo mode - shows pre-scraped data with full PackSense dashboard"""
+    """Demo mode - shows pre-scraped data with full PackSense dashboard using exact same template as analysis"""
     try:
         # Dynamically find the newest Tide Ultra Oxi Boost folder
         demo_folder = newest_product_folder() or "Tide_Ultra_Oxi_Boost_Liquid_Laundry_Detergent,_84_fl_oz,_59_Loads,_Advanced_Stain_Remover,_Laundry_Detergent_Liquid_with_Extra_Oxi_Power_2025-09-02"
@@ -136,21 +136,29 @@ def demo():
         with open(recursive_analysis_path, 'r', encoding='utf-8') as f:
             recursive_data = json.load(f)
         
-        # Process the demo data to match the expected template format
-        # Try to get all reviews first, fallback to initial_reviews
-        reviews = recursive_data.get('all_reviews', [])
-        if not reviews:
-            reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
-        total_reviews_count = recursive_data.get('total_reviews_extracted', len(reviews))
+        # Use the exact same logic as the regular analysis route
+        all_reviews = recursive_data.get('all_reviews', [])
+        initial_reviews = recursive_data.get('initial_reviews', {}).get('reviews', [])
+        packaging_reviews = recursive_data.get('packaging_reviews', {}).get('reviews', [])
         
-        # Clean and convert review data to proper types
+        # Enhanced metrics
+        total_reviews = recursive_data.get('total_reviews_extracted', 0)
+        packaging_related = recursive_data.get('packaging_related_reviews', 0)
+        packaging_percentage = recursive_data.get('packaging_percentage', 0.0)
+        
+        # Sentiment data
+        sentiment_breakdown = recursive_data.get('sentiment_breakdown', {})
+        positive_count = sentiment_breakdown.get('positive', 0)
+        neutral_count = sentiment_breakdown.get('neutral', 0)
+        negative_count = sentiment_breakdown.get('negative', 0)
+        
+        # Clean reviews data
         cleaned_reviews = []
-        for review in reviews:
+        for review in all_reviews:
             if isinstance(review, dict):
                 cleaned_review = {}
                 for key, value in review.items():
                     if key == 'rating':
-                        # Convert "5 out of 5" to 5.0
                         if isinstance(value, str) and 'out of' in value:
                             try:
                                 cleaned_review[key] = float(value.split(' out of')[0])
@@ -166,421 +174,134 @@ def demo():
                         cleaned_review[key] = str(value) if value is not None else ""
                 cleaned_reviews.append(cleaned_review)
         
-        # Load and clean packaging frequency data from JSON
-        def to_num(x):
-            try:
-                return float(str(x).replace(',', '').strip())
-            except Exception:
-                return 0.0
-
-        # Generate packaging_freq from actual data structure (packaging-only subset)
-        def _truthy(x):
-            if isinstance(x, bool): 
-                return x
-            s = str(x or "").strip().lower()
-            return s in {"true", "1", "yes", "y"}
-
-        # 1) Use the packaging flag in reviews to compute the KPI (don't infer)
-        packaging_reviews = [r for r in cleaned_reviews if _truthy(r.get("is_packaging_related"))]
-
-        # 2) Prefer precomputed packaging_freq from JSON; otherwise derive from keyword_sentence_map
-        raw_pf = (recursive_data or {}).get("packaging_freq")
-        ksm = (recursive_data or {}).get("keyword_sentence_map")
-
-        if isinstance(raw_pf, dict) and raw_pf:
-            packaging_freq = {str(k): to_num(v) for k, v in raw_pf.items()}
-        elif isinstance(raw_pf, list) and raw_pf:
-            packaging_freq = {}
-            for it in raw_pf:
-                if isinstance(it, dict):
-                    key = str(it.get("keyword") or it.get("term") or it.get("key") or "").strip()
-                    val = to_num(it.get("count") or it.get("value") or it.get("freq") or 0)
-                    if key: 
-                        packaging_freq[key] = packaging_freq.get(key, 0) + val
-        elif isinstance(ksm, dict) and ksm:
-            packaging_freq = {str(k): len(v or []) for k, v in ksm.items()}
-        else:
-            # Generate from search_term counts in packaging-related reviews only
-            from collections import Counter
-            search_terms = Counter()
-            
-            # Count search_term occurrences in packaging-related reviews only
-            for review in packaging_reviews:
-                search_term = review.get('search_term', '').strip()
-                if search_term:
-                    search_terms[search_term] += 1
-            
-            packaging_freq = dict(search_terms)
+        # Generate packaging frequency data
+        packaging_terms = recursive_data.get('packaging_terms_searched', [])
+        packaging_freq = {}
+        for term in packaging_terms:
+            packaging_freq[term] = 1
         
-        # Generate sample component frequency data
-        sample_component_freq = {
-            'bottle': 35, 'cap': 25, 'label': 20, 'seal': 15, 'handle': 10
+        # Generate keyword frequencies for word cloud
+        keyword_frequencies = {}
+        all_text = ' '.join([r.get('text', '') for r in cleaned_reviews])
+        for term in packaging_terms:
+            import re
+            pattern = r'\b' + re.escape(term.lower()) + r'\b'
+            count = len(re.findall(pattern, all_text.lower()))
+            if count > 0:
+                keyword_frequencies[term] = count
+        
+        # Sort by frequency (highest first)
+        keyword_frequencies = dict(sorted(keyword_frequencies.items(), key=lambda x: x[1], reverse=True))
+        
+        # Generate other required data
+        packaging_keywords_flat = packaging_terms
+        packaging_dropdown_data_flat = [{'value': term, 'label': term} for term in packaging_terms]
+        
+        # Generate image URLs
+        product_image_url = url_for('static', filename=f'{demo_folder}/product.jpg')
+        defect_image_url = url_for('static', filename=f'{demo_folder}/defects_overlay.png')
+        base_image_url = url_for('static', filename=f'{demo_folder}/')
+        
+        # Generate review filters
+        review_filters = {
+            'all': total_reviews,
+            'packaging': packaging_related,
+            'positive': positive_count,
+            'negative': negative_count,
+            'neutral': neutral_count
         }
         
-        # Generate sample condition frequency data
-        sample_condition_freq = {
-            'good': 180, 'excellent': 120, 'poor': 15, 'damaged': 8, 'broken': 5
-        }
-        
-        # Generate sample enhanced metrics
-        sample_enhanced_metrics = {
-            'packaging_satisfaction_score': 7.2,
+        # Generate enhanced metrics
+        enhanced_metrics = {
+            'packaging_quality_score': 7.2,
             'defect_rate': 0.15,
-            'quality_score': 8.1,
-            'customer_satisfaction': 7.8
+            'customer_satisfaction': 8.1,
+            'packaging_consistency': 6.8
         }
         
-        # Generate sample top keywords
-        sample_top_keywords = [
-            {'word': 'bottle', 'count': 45, 'sentiment': 'neutral'},
-            {'word': 'container', 'count': 32, 'sentiment': 'positive'},
-            {'word': 'package', 'count': 28, 'sentiment': 'neutral'},
-            {'word': 'box', 'count': 25, 'sentiment': 'positive'},
-            {'word': 'cap', 'count': 22, 'sentiment': 'neutral'}
-        ]
-        
-        # Generate sample keyword frequencies (same as packaging_freq for demo)
-        sample_keyword_frequencies = packaging_freq
-        
-        # Generate packaging_terms list for dropdowns
-        packaging_terms = sorted(packaging_freq.keys()) if packaging_freq else []
-        
-        # Bulletproof co-occurrence graph builder
-        def _normalize_graph(raw):
-            """Accept a few common shapes and return {'nodes':[{id,label,count}], 'links':[{source,target,weight}]}"""
-            if not isinstance(raw, dict): return None
-            nodes_raw, links_raw = raw.get("nodes"), raw.get("links")
-            if not isinstance(nodes_raw, list) or not isinstance(links_raw, list): return None
-
-            seen = set()
-            nodes = []
-            for n in nodes_raw:
-                nid = str( (n.get("id") or n.get("name") or n.get("label") or "") ).strip()
-                if not nid or nid in seen: continue
-                nodes.append({
-                    "id": nid,
-                    "label": n.get("label") or nid,
-                    "count": int(n.get("count") or n.get("value") or 1)
-                })
-                seen.add(nid)
-
-            links = []
-            for e in links_raw:
-                src = e.get("source"); tgt = e.get("target")
-                # handle {source:{id:...}} or plain strings
-                if isinstance(src, dict): src = src.get("id")
-                if isinstance(tgt, dict): tgt = tgt.get("id")
-                s = str(src or "").strip(); t = str(tgt or "").strip()
-                if not s or not t or s == t: continue
-                links.append({
-                    "source": s,
-                    "target": t,
-                    "weight": int(e.get("weight") or e.get("value") or 1)
-                })
-            return {"nodes": nodes, "links": links} if nodes and links else None
-
-        def build_cooc_graph(recursive_data, packaging_terms=None, min_pair_count=2, top_n_terms=50):
-            """Canonical graph; falls back to looser thresholds if empty."""
-            import re, itertools
-            from collections import Counter
-            
-            def _tok(s):
-                # tokens like 'bottle', 'box', 'leak', 'cap'
-                return re.findall(r"[A-Za-z][A-Za-z\-]+", (s or "").lower())
-            
-            # 0) If precomputed in JSON, normalize and return
-            norm = _normalize_graph((recursive_data or {}).get("cooccurrence_graph"))
-            if norm: return norm
-
-            reviews = (recursive_data or {}).get("reviews", [])
-            pkg_reviews = [r for r in reviews if _truthy(r.get("is_packaging_related"))] or reviews
-
-            # terms whitelist from packaging_freq if provided
-            if packaging_terms is None:
-                pf = (recursive_data or {}).get("packaging_freq") or {}
-                packaging_terms = set(map(lambda k: str(k).lower(), pf.keys())) if isinstance(pf, dict) else set()
-            else:
-                packaging_terms = set(map(str.lower, packaging_terms or []))
-
-            # term counts (prefer keyword_sentence_map)
-            ksm = (recursive_data or {}).get("keyword_sentence_map")
-            term_counts = Counter()
-            if isinstance(ksm, dict) and ksm:
-                for k, v in ksm.items():
-                    k = str(k).lower()
-                    if (not packaging_terms) or (k in packaging_terms):
-                        term_counts[k] += len(v or [])
-            else:
-                for r in pkg_reviews:
-                    for w in set(_tok(r.get("review_text"))):
-                        if (not packaging_terms) or (w in packaging_terms):
-                            term_counts[w] += 1
-
-            if not term_counts:
-                return {"nodes": [], "links": []}
-
-            top_terms = set([t for t, _ in term_counts.most_common(top_n_terms)])
-
-            # pair counts
-            pair_counts = Counter()
-            for r in pkg_reviews:
-                words = sorted(w for w in set(_tok(r.get("review_text"))) if w in top_terms)
-                for a, b in itertools.combinations(words, 2):
-                    pair_counts[(a, b)] += 1
-
-            # try strict threshold first; if empty, relax automatically
-            thresholds = [min_pair_count, 1]
-            graph = None
-            for thr in thresholds:
-                pairs = {k: v for k, v in pair_counts.items() if v >= thr}
-                if not pairs: 
-                    continue
-                vals = list(pairs.values())
-                vmin, vmax = min(vals), max(vals)
-                scale = (lambda v: 3) if vmin == vmax else (lambda v: max(1, min(5, int(round(1 + 4*(v - vmin)/(vmax - vmin))))))
-                nodes = [{"id": t, "label": t, "count": int(term_counts[t])} for t in sorted(top_terms)]
-                links = [{"source": a, "target": b, "weight": scale(c)} for (a, b), c in pairs.items()]
-                graph = {"nodes": nodes, "links": links}
-                if graph["links"]: break
-
-            return graph or {"nodes": [], "links": []}
-        
-        # Build co-occurrence graph with more terms to match localhost
-        cooc_graph = build_cooc_graph(recursive_data, packaging_terms=set([t.lower() for t in packaging_terms]),
-                                      min_pair_count=1, top_n_terms=100)
-        
-        # Debug logging
-        print(f"DEBUG: packaging_terms count: {len(packaging_terms)}")
-        print(f"DEBUG: packaging_freq keys: {list(packaging_freq.keys())[:10] if packaging_freq else 'None'}")
-        print(f"DEBUG: cooc_graph nodes: {len(cooc_graph.get('nodes', []))}")
-        print(f"DEBUG: cooc_graph links: {len(cooc_graph.get('links', []))}")
-        print(f"DEBUG: recursive_data keys: {list(recursive_data.keys()) if recursive_data else 'None'}")
-        if recursive_data and 'reviews' in recursive_data:
-            print(f"DEBUG: total reviews: {len(recursive_data['reviews'])}")
-            packaging_reviews = [r for r in recursive_data['reviews'] if _truthy(r.get('is_packaging_related'))]
-            print(f"DEBUG: packaging reviews: {len(packaging_reviews)}")
-        
-        # Fallback: if no graph data, create comprehensive sample data for demo (matching localhost)
-        if not cooc_graph.get('nodes') or not cooc_graph.get('links'):
-            print("DEBUG: No co-occurrence data found, using comprehensive sample data")
-            cooc_graph = {
-                'nodes': [
-                    {'id': 'packaging', 'label': 'packaging', 'count': 85},
-                    {'id': 'package', 'label': 'package', 'count': 78},
-                    {'id': 'bottle', 'label': 'bottle', 'count': 72},
-                    {'id': 'container', 'label': 'container', 'count': 68},
-                    {'id': 'leak', 'label': 'leak', 'count': 65},
-                    {'id': 'damage', 'label': 'damage', 'count': 62},
-                    {'id': 'seal', 'label': 'seal', 'count': 58},
-                    {'id': 'box', 'label': 'box', 'count': 55},
-                    {'id': 'cap', 'label': 'cap', 'count': 52},
-                    {'id': 'spill', 'label': 'spill', 'count': 48},
-                    {'id': 'wrapped', 'label': 'wrapped', 'count': 45},
-                    {'id': 'cracked', 'label': 'cracked', 'count': 42},
-                    {'id': 'bag', 'label': 'bag', 'count': 38},
-                    {'id': 'tin', 'label': 'tin', 'count': 35},
-                    {'id': 'mess', 'label': 'mess', 'count': 32},
-                    {'id': 'broke', 'label': 'broke', 'count': 28},
-                    {'id': 'size', 'label': 'size', 'count': 25},
-                    {'id': 'clean', 'label': 'clean', 'count': 22},
-                    {'id': 'can', 'label': 'can', 'count': 20},
-                    {'id': 'leaked', 'label': 'leaked', 'count': 18},
-                    {'id': 'secured', 'label': 'secured', 'count': 16},
-                    {'id': 'top', 'label': 'top', 'count': 14},
-                    {'id': 'large', 'label': 'large', 'count': 12},
-                    {'id': 'color', 'label': 'color', 'count': 10},
-                    {'id': 'secure', 'label': 'secure', 'count': 8},
-                    {'id': 'cover', 'label': 'cover', 'count': 6},
-                    {'id': 'tape', 'label': 'tape', 'count': 5},
-                    {'id': 'lid', 'label': 'lid', 'count': 4},
-                    {'id': 'opening', 'label': 'opening', 'count': 3},
-                    {'id': 'closing', 'label': 'closing', 'count': 2},
-                    {'id': 'sealed', 'label': 'sealed', 'count': 1},
-                    {'id': 'damaged', 'label': 'damaged', 'count': 1},
-                    {'id': 'leaking', 'label': 'leaking', 'count': 1},
-                    {'id': 'spilled', 'label': 'spilled', 'count': 1}
-                ],
-                'links': [
-                    {'source': 'packaging', 'target': 'package', 'weight': 5},
-                    {'source': 'bottle', 'target': 'leak', 'weight': 5},
-                    {'source': 'bottle', 'target': 'cap', 'weight': 4},
-                    {'source': 'package', 'target': 'box', 'weight': 4},
-                    {'source': 'container', 'target': 'bottle', 'weight': 4},
-                    {'source': 'leak', 'target': 'spill', 'weight': 4},
-                    {'source': 'damage', 'target': 'package', 'weight': 3},
-                    {'source': 'seal', 'target': 'tape', 'weight': 3},
-                    {'source': 'box', 'target': 'container', 'weight': 3},
-                    {'source': 'cap', 'target': 'leak', 'weight': 3},
-                    {'source': 'wrapped', 'target': 'package', 'weight': 3},
-                    {'source': 'cracked', 'target': 'damage', 'weight': 3},
-                    {'source': 'bag', 'target': 'container', 'weight': 3},
-                    {'source': 'tin', 'target': 'container', 'weight': 3},
-                    {'source': 'mess', 'target': 'spill', 'weight': 3},
-                    {'source': 'broke', 'target': 'damage', 'weight': 3},
-                    {'source': 'size', 'target': 'large', 'weight': 2},
-                    {'source': 'clean', 'target': 'package', 'weight': 2},
-                    {'source': 'can', 'target': 'container', 'weight': 2},
-                    {'source': 'leaked', 'target': 'leak', 'weight': 2},
-                    {'source': 'secured', 'target': 'seal', 'weight': 2},
-                    {'source': 'top', 'target': 'cap', 'weight': 2},
-                    {'source': 'color', 'target': 'package', 'weight': 2},
-                    {'source': 'secure', 'target': 'seal', 'weight': 2},
-                    {'source': 'cover', 'target': 'cap', 'weight': 2},
-                    {'source': 'lid', 'target': 'cap', 'weight': 2},
-                    {'source': 'opening', 'target': 'lid', 'weight': 1},
-                    {'source': 'closing', 'target': 'lid', 'weight': 1},
-                    {'source': 'sealed', 'target': 'seal', 'weight': 1},
-                    {'source': 'damaged', 'target': 'damage', 'weight': 1},
-                    {'source': 'leaking', 'target': 'leak', 'weight': 1},
-                    {'source': 'spilled', 'target': 'spill', 'weight': 1}
-                ]
-            }
-        
-        # Generate sample co-occurrence data with proper structure
-        sample_cooccurrence_data = {
-            'nodes': [
-                {'id': 'bottle', 'group': 1, 'size': 45, 'name': 'bottle'},
-                {'id': 'container', 'group': 1, 'size': 32, 'name': 'container'},
-                {'id': 'package', 'group': 1, 'size': 28, 'name': 'package'},
-                {'id': 'box', 'group': 1, 'size': 25, 'name': 'box'},
-                {'id': 'cap', 'group': 1, 'size': 22, 'name': 'cap'},
-                {'id': 'lid', 'group': 1, 'size': 18, 'name': 'lid'},
-                {'id': 'plastic', 'group': 1, 'size': 15, 'name': 'plastic'},
-                {'id': 'seal', 'group': 1, 'size': 12, 'name': 'seal'}
-            ],
-            'links': [
-                {'source': 'bottle', 'target': 'container', 'weight': 15, 'value': 15},
-                {'source': 'package', 'target': 'box', 'weight': 12, 'value': 12},
-                {'source': 'bottle', 'target': 'cap', 'weight': 18, 'value': 18},
-                {'source': 'cap', 'target': 'lid', 'weight': 10, 'value': 10},
-                {'source': 'container', 'target': 'plastic', 'weight': 8, 'value': 8},
-                {'source': 'bottle', 'target': 'seal', 'weight': 6, 'value': 6}
-            ]
+        # Generate sample data for other components
+        cooccurrence_data = {
+            'bottle': ['cap', 'seal'],
+            'box': ['tape', 'package'],
+            'container': ['seal', 'lid'],
+            'package': ['box', 'tape']
         }
         
-        # Generate sample keyword image map
-        sample_keyword_image_map = {
+        keyword_image_map = {
             'bottle': ['bottle_image1.jpg', 'bottle_image2.jpg'],
+            'box': ['box_image1.jpg', 'box_image2.jpg'],
             'container': ['container_image1.jpg'],
             'package': ['package_image1.jpg', 'package_image2.jpg']
         }
         
-        # Generate sample defect pairs (as tuples for template compatibility)
-        sample_defect_pairs = [
-            ('bottle', 'leak'),
-            ('cap', 'crack'),
-            ('seal', 'broken'),
-            ('container', 'spill')
+        defect_pairs = [
+            {'component': 'bottle', 'condition': 'cracked', 'count': 5},
+            {'component': 'box', 'condition': 'damaged', 'count': 3},
+            {'component': 'container', 'condition': 'leaked', 'count': 2},
+            {'component': 'package', 'condition': 'torn', 'count': 1}
         ]
         
-        # Generate image URLs for defect modal
-        product_image_rel = f'{demo_folder}/product.jpg'
-        defects_overlay_rel = f'{demo_folder}/defects_overlay.png'
+        # Generate image files list
+        image_files = []
+        review_images_dir = os.path.join(demo_path, 'review_images')
+        if os.path.exists(review_images_dir):
+            image_files = [f for f in os.listdir(review_images_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif'))]
         
-        product_image_url = url_for('static', filename=product_image_rel) if os.path.exists(os.path.join('static', product_image_rel)) else None
-        defect_overlay_url = url_for('static', filename=defects_overlay_rel) if os.path.exists(os.path.join('static', defects_overlay_rel)) else None
+        # Generate packaging library URL
+        packaging_library_url = url_for('static', filename='packaging_library.xlsx')
         
-        print(f"Demo folder: {demo_folder}")
-        print(f"Product image path: {os.path.join('static', product_image_rel)}")
-        print(f"Product image exists: {os.path.exists(os.path.join('static', product_image_rel))}")
-        print(f"Product image URL: {product_image_url}")
-        print(f"Defect overlay path: {os.path.join('static', defects_overlay_rel)}")
-        print(f"Defect overlay exists: {os.path.exists(os.path.join('static', defects_overlay_rel))}")
-        print(f"Defect overlay URL: {defect_overlay_url}")
+        # Generate product description URL
+        product_description_url = '/demo-product'
         
-        # Helper functions for robust data processing
-        def _norm_sent(x):
-            return str(x or "").strip().lower()
+        # Generate keyword sentence mapping
+        keyword_sentence_map = {}
+        for review in cleaned_reviews:
+            text = review.get('text', '')
+            for keyword in packaging_terms:
+                if keyword.lower() in text.lower():
+                    if keyword not in keyword_sentence_map:
+                        keyword_sentence_map[keyword] = []
+                    keyword_sentence_map[keyword].append(text[:100] + '...' if len(text) > 100 else text)
         
-        def _as_bool(x):
-            if isinstance(x, bool): 
-                return x
-            s = _norm_sent(x)
-            return s in {"true", "1", "yes", "y"}
+        # Generate defect coordinates mapping
+        defect_coords_map = {}
         
-        # Compute KPI counts from FULL review data (no slicing)
-        reviews_full = cleaned_reviews  # FULL LIST – no slicing here
+        # Generate Excel file URL
+        excel_url = url_for('static', filename=f'{demo_folder}/analysis_results.xlsx')
         
-        # Debug: Print review counts to understand the data
-        print(f"Demo Debug - Total reviews loaded: {len(reviews_full)}")
-        print(f"Demo Debug - Total reviews extracted: {total_reviews_count}")
-        print(f"Demo Debug - Packaging reviews count: {len(packaging_reviews)}")
-        
-        # Use actual sentiment data from the JSON file
-        sentiment_breakdown = recursive_data.get('sentiment_breakdown', {})
-        pos = sentiment_breakdown.get('positive', 0)
-        neu = sentiment_breakdown.get('neutral', 0)
-        neg = sentiment_breakdown.get('negative', 0)
-        pack = recursive_data.get('packaging_related_reviews', 0)  # Use actual packaging count from JSON
-        
-        # Debug: Print sentiment counts
-        print(f"Demo Debug - Sentiment counts: pos={pos}, neu={neu}, neg={neg}, pack={pack}")
-        
-        # Defects: use a realistic count based on packaging issues
-        defects = max(4, min(62, pack // 4))  # Between 4-62 defects based on packaging reviews
-        
-        # Create KPI object for template
-        kpi = {
-            "total": len(reviews_full),
-            "positive": pos,
-            "neutral": neu,
-            "negative": neg,
-            "packaging_related": pack,
-            "packaging_pct": round((pack / len(reviews_full) * 100), 1) if reviews_full else 0.0,
-            "defects": defects,
-        }
-        
-        # Create properly formatted data for the template with all required fields
-        demo_data = {
-            'product_name': 'Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
-            'product_description_url': '/demo-product',
-            'total_reviews': int(total_reviews_count),
-            'packaging_review_count': int(recursive_data.get('packaging_related_reviews', 0)),
-            'packaging_percentage': float(recursive_data.get('packaging_percentage', 0.0)),
-            'sentiment_distribution': {
-                'positive': pos,
-                'negative': neg,
-                'neutral': neu
-            },
-            'reviews': reviews_full,  # Use full reviews for rendering
-            'is_demo': True,
-            'product_image_url': product_image_url,
-            'defect_overlay_url': defect_overlay_url,
-            'kpi': kpi,  # Add KPI object for template
-            
-            # Add all the required template variables with safe defaults
-            'review_filters': {
-                'all': len(reviews_full),
-                'packaging': pack,
-                'positive': pos,
-                'negative': neg,
-                'neutral': neu
-            },
-            'packaging_freq': packaging_freq,
-            'packaging_terms': packaging_terms,
-            'cooc_graph': cooc_graph,
-            'component_freq': sample_component_freq,
-            'condition_freq': sample_condition_freq,
-            'keyword_sentence_map': {},
-            'defect_coords_map': {},
-            'enhanced_metrics': sample_enhanced_metrics,
-            'top_keywords': sample_top_keywords,
-            'review_timeline': [],
-            'defect_summary': {'total_defects': 15, 'critical_defects': 3, 'minor_defects': 12},
-            
-            # Add the missing variables that the template expects
-            'keyword_frequencies': sample_keyword_frequencies,
-            'cooccurrence_data': sample_cooccurrence_data,
-            'keyword_image_map': sample_keyword_image_map,
-            'defect_pairs': sample_defect_pairs
-        }
-        
-        # Render using the demo-specific template with KPI fixes
-        return render_template('results_enhanced_demo.html', **demo_data)
+        # Render using the exact same template and variables as regular analysis
+        return render_template(
+            "results_enhanced.html",
+            product_name='Tide Ultra Oxi Boost Liquid Laundry Detergent, 84 fl oz, 59 Loads, Advanced Stain Remover, Laundry Detergent Liquid with Extra Oxi Power',
+            packaging_keywords=packaging_keywords_flat,
+            packaging_dropdown_data=packaging_dropdown_data_flat,
+            image_files=image_files,
+            reviews=cleaned_reviews,
+            excel_file=excel_url,
+            cooccurrence_data=cooccurrence_data,
+            keyword_image_map=keyword_image_map,
+            product_folder=demo_folder,
+            packaging_library_url=packaging_library_url,
+            keyword_sentence_map=keyword_sentence_map,
+            defect_image_url=defect_image_url,
+            defect_pairs=defect_pairs,
+            total_reviews=total_reviews,
+            positive_count=positive_count,
+            neutral_count=neutral_count,
+            negative_count=negative_count,
+            base_image_url=base_image_url,
+            packaging_freq=packaging_freq,
+            enhanced_metrics=enhanced_metrics,
+            product_description_url=product_description_url,
+            review_filters=review_filters,
+            keyword_frequencies=keyword_frequencies,
+            is_demo=True  # Add demo flag for template
+        )
         
     except Exception as e:
         print(f"Error loading demo data: {e}")
-        # Return a simple demo page if everything fails
+        import traceback
+        traceback.print_exc()
         return f"""
         <html>
         <head><title>PackSense Demo</title></head>
@@ -592,6 +313,7 @@ def demo():
         </body>
         </html>
         """
+
 
 @app.route("/demo-product")
 def demo_product():
