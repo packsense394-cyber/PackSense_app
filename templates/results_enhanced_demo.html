@@ -2741,7 +2741,139 @@
                 console.error('No links in co-occurrence data!');
             }
             
-            initCoocNetwork(coocBase, modal);
+            // Try the complex implementation first, fallback to simple if it fails
+            try {
+                initCoocNetwork(coocBase, modal);
+            } catch (error) {
+                console.error('Complex network failed, using simple fallback:', error);
+                createSimpleNetwork(coocBase, modal);
+            }
+        }
+        
+        // Simple fallback network function
+        function createSimpleNetwork(base, modal) {
+            console.log('Creating simple network with:', base);
+            
+            const svgContainer = modal.querySelector("#cooc-svg");
+            if (!svgContainer) {
+                console.error('SVG container not found');
+                return;
+            }
+            
+            // Clear existing content
+            svgContainer.innerHTML = '';
+            
+            // Create SVG
+            const svg = d3.select(svgContainer)
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .style('background', '#000000');
+            
+            const width = 800;
+            const height = 600;
+            
+            // Create groups
+            const gLinks = svg.append('g').attr('class', 'links');
+            const gNodes = svg.append('g').attr('class', 'nodes');
+            
+            // Create scale for node sizes
+            const r = d3.scaleSqrt()
+                .domain(d3.extent(base.nodes, d => +d.size || 1))
+                .range([10, 30]);
+
+            // Create links
+            const link = gLinks.selectAll('line')
+                .data(base.links)
+                .enter().append('line')
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', d => Math.sqrt(d.weight || 1) * 0.3);
+
+            // Create nodes
+            const node = gNodes.selectAll('g.node')
+                .data(base.nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended))
+                .on('click', function(event, d) {
+                    console.log('Node clicked:', d);
+                });
+
+            node.append('circle')
+                .attr('r', d => r(d.size || 1))
+                .attr('fill', '#fff')
+                .attr('stroke', '#000')
+                .attr('stroke-width', 1.5)
+                .style('cursor', 'pointer');
+
+            node.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('font-size', '11px')
+                .attr('fill', '#000')
+                .style('pointer-events', 'none')
+                .text(d => d.name);
+            
+            // Create force simulation
+            const simulation = d3.forceSimulation(base.nodes)
+                .force('link', d3.forceLink(base.links)
+                    .id(d => d.id)
+                    .distance(80)
+                    .strength(0.1))
+                .force('charge', d3.forceManyBody().strength(-600))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => r(d.size || 1) + 15))
+                .force('x', d3.forceX(width / 2).strength(0.05))
+                .force('y', d3.forceY(height / 2).strength(0.05));
+            
+            // Update positions on tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+            
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // Update info panel
+            const infoPanel = modal.querySelector('.info-panel');
+            if (infoPanel) {
+                infoPanel.innerHTML = `
+                    <h3 style="margin: 0 0 15px 0;">Co-occurrence Network</h3>
+                    <p style="margin: 0 0 20px 0;">Click on any node to see related reviews and images</p>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
+                        <h4 style="margin: 0 0 15px 0;">Network Information</h4>
+                        <p style="margin: 5px 0;"><strong>Total Nodes:</strong> ${base.nodes.length}</p>
+                        <p style="margin: 5px 0;"><strong>Total Connections:</strong> ${base.links.length}</p>
+                        <p style="margin: 5px 0;"><strong>Packaging Terms:</strong> ${base.nodes.length}</p>
+                    </div>
+                `;
+            }
         }
         
         // D3 co-occurrence network implementation (matching localhost layout)
