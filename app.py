@@ -298,7 +298,16 @@ def demo():
             'clean': {'mess': 3, 'package': 3, 'packaging': 4, 'design': 2, 'tape': 2, 'box': 1, 'bottle': 1, 'container': 1, 'cap': 1, 'lid': 1},
             'protective': {'packaging': 6, 'design': 4, 'secure': 3, 'sealed': 2, 'box': 2, 'package': 2, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1},
             'loose': {'packaging': 4, 'design': 2, 'secure': 2, 'sealed': 1, 'box': 1, 'package': 1, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1},
-            'padding': {'packaging': 3, 'design': 2, 'secure': 1, 'sealed': 1, 'box': 1, 'package': 1, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1}
+            'padding': {'packaging': 3, 'design': 2, 'secure': 1, 'sealed': 1, 'box': 1, 'package': 1, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1},
+            'cracked': {'crack': 4, 'damaged': 7, 'broken': 5, 'leak': 5, 'spill': 2, 'damage': 3, 'plastic': 2, 'bottle': 1, 'container': 1, 'mess': 1},
+            'damaged': {'box': 11, 'package': 9, 'packaging': 8, 'tape': 6, 'cracked': 7, 'broken': 5, 'damage': 4, 'leak': 3, 'spill': 2, 'mess': 2},
+            'spilled': {'spill': 4, 'leak': 3, 'leaking': 2, 'mess': 3, 'damage': 2, 'broken': 1, 'cracked': 1, 'plastic': 1, 'bottle': 1, 'container': 1},
+            'crack': {'bottle': 6, 'container': 5, 'cracked': 4, 'damage': 3, 'broken': 2, 'plastic': 3, 'leak': 2, 'spill': 1, 'design': 1, 'mess': 1},
+            'broke': {'broken': 8, 'damage': 6, 'cracked': 4, 'plastic': 5, 'bottle': 3, 'container': 2, 'leak': 2, 'spill': 1, 'mess': 2, 'design': 1},
+            'mess': {'spill': 6, 'leak': 2, 'damage': 2, 'broken': 2, 'cracked': 1, 'plastic': 2, 'bottle': 1, 'container': 1, 'design': 1, 'clean': 3},
+            'cracked': {'crack': 4, 'damaged': 7, 'broken': 5, 'leak': 5, 'spill': 2, 'damage': 3, 'plastic': 2, 'bottle': 1, 'container': 1, 'mess': 1},
+            'damaged': {'box': 11, 'package': 9, 'packaging': 8, 'tape': 6, 'cracked': 7, 'broken': 5, 'damage': 4, 'leak': 3, 'spill': 2, 'mess': 2},
+            'spilled': {'spill': 4, 'leak': 3, 'leaking': 2, 'mess': 3, 'damage': 2, 'broken': 1, 'cracked': 1, 'plastic': 1, 'bottle': 1, 'container': 1}
         }
         
         keyword_image_map = {
