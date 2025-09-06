@@ -344,6 +344,42 @@ def demo():
         # Generate Excel file URL
         excel_url = f'/static/{demo_folder}/analysis_results.xlsx'
         
+        # Convert co-occurrence data to the format expected by the template (nodes and links)
+        nodes = []
+        links = []
+        
+        # Create nodes from all unique terms
+        all_terms = set()
+        for term, connections in cooccurrence_data.items():
+            all_terms.add(term)
+            for connected_term in connections.keys():
+                all_terms.add(connected_term)
+        
+        # Create nodes
+        for i, term in enumerate(all_terms):
+            nodes.append({
+                'id': term,
+                'name': term,
+                'group': 1,
+                'size': sum(cooccurrence_data.get(term, {}).values()) + sum(cooccurrence_data.get(connected, {}).get(term, 0) for connected in cooccurrence_data.keys())
+            })
+        
+        # Create links
+        for term, connections in cooccurrence_data.items():
+            for connected_term, weight in connections.items():
+                links.append({
+                    'source': term,
+                    'target': connected_term,
+                    'weight': weight,
+                    'value': weight
+                })
+        
+        # Create the cooc_graph structure expected by the template
+        cooc_graph = {
+            'nodes': nodes,
+            'links': links
+        }
+        
         # Render using the demo template that has the correct layout
         return render_template(
             "results_enhanced_demo.html",
@@ -362,6 +398,7 @@ def demo():
             packaging_dropdown_data=packaging_dropdown_data_flat,
             image_files=image_files,
             cooccurrence_data=cooccurrence_data,
+            cooc_graph=cooc_graph,
             keyword_image_map=keyword_image_map,
             product_folder=demo_folder,
             keyword_sentence_map=keyword_sentence_map,
