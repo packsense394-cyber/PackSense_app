@@ -2781,10 +2781,10 @@
             const gLinks = svg.append('g').attr('class', 'links');
             const gNodes = svg.append('g').attr('class', 'nodes');
             
-            // Create scale for node sizes
+            // Create scale for node sizes (bigger nodes)
             const r = d3.scaleSqrt()
                 .domain(d3.extent(base.nodes, d => +d.size || 1))
-                .range([10, 30]);
+                .range([15, 40]);
 
             // Create links
             const link = gLinks.selectAll('line')
@@ -2817,20 +2817,21 @@
             node.append('text')
                 .attr('text-anchor', 'middle')
                 .attr('dy', '0.35em')
-                .attr('font-size', '11px')
+                .attr('font-size', '13px')
+                .attr('font-weight', 'bold')
                 .attr('fill', '#000')
                 .style('pointer-events', 'none')
                 .text(d => d.name);
             
-            // Create force simulation
+            // Create force simulation (better spacing)
             const simulation = d3.forceSimulation(base.nodes)
                 .force('link', d3.forceLink(base.links)
                     .id(d => d.id)
-                    .distance(80)
+                    .distance(120)
                     .strength(0.1))
-                .force('charge', d3.forceManyBody().strength(-600))
+                .force('charge', d3.forceManyBody().strength(-800))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(d => r(d.size || 1) + 15))
+                .force('collision', d3.forceCollide().radius(d => r(d.size || 1) + 25))
                 .force('x', d3.forceX(width / 2).strength(0.05))
                 .force('y', d3.forceY(height / 2).strength(0.05));
             
