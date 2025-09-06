@@ -175,26 +175,31 @@ def demo():
         
         # Generate packaging frequency data
         packaging_terms = recursive_data.get('packaging_terms_searched', [])
+        if not packaging_terms:
+            packaging_terms = ['bottle', 'box', 'container', 'package', 'tape', 'pouch', 'pack', 'design', 'lid', 'plastic', 'crack', 'broke', 'packaging', 'mess', 'cap', 'leak', 'spill', 'dent', 'broken', 'padding', 'loose', 'protective']
+        
         packaging_freq = {}
         for term in packaging_terms:
-            packaging_freq[term] = 1
+            if term:  # Ensure term is not None or empty
+                packaging_freq[str(term)] = 1
         
         # Generate keyword frequencies for word cloud
         keyword_frequencies = {}
-        all_text = ' '.join([r.get('text', '') for r in cleaned_reviews])
+        all_text = ' '.join([str(r.get('text', '')) for r in cleaned_reviews])
         for term in packaging_terms:
-            import re
-            pattern = r'\b' + re.escape(term.lower()) + r'\b'
-            count = len(re.findall(pattern, all_text.lower()))
-            if count > 0:
-                keyword_frequencies[term] = count
+            if term:  # Ensure term is not None or empty
+                import re
+                pattern = r'\b' + re.escape(str(term).lower()) + r'\b'
+                count = len(re.findall(pattern, all_text.lower()))
+                if count > 0:
+                    keyword_frequencies[str(term)] = int(count)
         
         # Sort by frequency (highest first)
         keyword_frequencies = dict(sorted(keyword_frequencies.items(), key=lambda x: x[1], reverse=True))
         
         # Generate other required data
-        packaging_keywords_flat = packaging_terms
-        packaging_dropdown_data_flat = [{'value': term, 'label': term} for term in packaging_terms]
+        packaging_keywords_flat = [str(term) for term in packaging_terms if term]
+        packaging_dropdown_data_flat = [{'value': str(term), 'label': str(term)} for term in packaging_terms if term]
         
         # Generate image URLs
         product_image_url = url_for('static', filename=f'{demo_folder}/product.jpg')
@@ -266,12 +271,13 @@ def demo():
         # Generate keyword sentence mapping
         keyword_sentence_map = {}
         for review in cleaned_reviews:
-            text = review.get('text', '')
+            text = str(review.get('text', ''))
             for keyword in packaging_terms:
-                if keyword.lower() in text.lower():
-                    if keyword not in keyword_sentence_map:
-                        keyword_sentence_map[keyword] = []
-                    keyword_sentence_map[keyword].append(text[:100] + '...' if len(text) > 100 else text)
+                if keyword and keyword.lower() in text.lower():
+                    keyword_str = str(keyword)
+                    if keyword_str not in keyword_sentence_map:
+                        keyword_sentence_map[keyword_str] = []
+                    keyword_sentence_map[keyword_str].append(text[:100] + '...' if len(text) > 100 else text)
         
         # Generate defect coordinates mapping
         defect_coords_map = {}
@@ -291,7 +297,24 @@ def demo():
             reviews=cleaned_reviews,
             excel_file=excel_url,
             packaging_library_url=packaging_library_url,
-            is_demo=True
+            is_demo=True,
+            # Add missing variables that template expects
+            packaging_keywords=packaging_keywords_flat,
+            packaging_dropdown_data=packaging_dropdown_data_flat,
+            image_files=image_files,
+            cooccurrence_data=cooccurrence_data,
+            keyword_image_map=keyword_image_map,
+            product_folder=demo_folder,
+            keyword_sentence_map=keyword_sentence_map,
+            defect_image_url=defect_image_url,
+            defect_pairs=defect_pairs,
+            total_reviews=total_reviews,
+            positive_count=positive_count,
+            neutral_count=neutral_count,
+            negative_count=negative_count,
+            base_image_url=base_image_url,
+            enhanced_metrics=enhanced_metrics,
+            keyword_frequencies=keyword_frequencies
         )
         
     except Exception as e:
