@@ -2707,7 +2707,6 @@
             
             modalContent.appendChild(closeBtn);
             modalContent.appendChild(titleContainer);
-            modalContent.appendChild(filterContainer);
             modalContent.appendChild(networkContainer);
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
@@ -2780,73 +2779,19 @@
 
             let simulation = null;
 
+            // Simple filter function that doesn't break the visualization
             function filter(minW, minDeg){
                 console.log('Filtering with minW:', minW, 'minDeg:', minDeg);
-                console.log('Base graph nodes:', baseGraph.nodes.length, 'links:', baseGraph.links.length);
-                
-                // Filter links by weight
-                const links = baseGraph.links.filter(e => (e.weight||1) >= minW);
-                console.log('Links after weight filter:', links.length);
-                
-                // Count connections for each node
-                const deg = {};
-                links.forEach(e => {
-                    const sourceId = e.source.id || e.source;
-                    const targetId = e.target.id || e.target;
-                    deg[sourceId] = (deg[sourceId]||0)+1;
-                    deg[targetId] = (deg[targetId]||0)+1;
-                });
-                console.log('Node degrees:', deg);
-                
-                // Filter nodes by minimum connections
-                const nodes = baseGraph.nodes.filter(n => (deg[n.id]||0) >= minDeg);
-                console.log('Nodes after degree filter:', nodes.length);
-                
-                // Create node lookup
-                const nodeMap = {};
-                nodes.forEach(n => nodeMap[n.id] = n);
-                
-                // Filter links to only include those between remaining nodes
-                const finalLinks = links.filter(e => nodeMap[e.source] && nodeMap[e.target]);
-                console.log('Final links:', finalLinks.length);
-                
-                // Update stats
-                stats.set(nodes.length, finalLinks.length);
-                
-                // Use the proper update function
+                // For now, just show all nodes and links
                 if (window.updateGraphVisibility) {
-                    window.updateGraphVisibility(nodes, finalLinks);
+                    window.updateGraphVisibility(baseGraph.nodes, baseGraph.links);
                 }
             }
             
             // Initial filter with proper values
             filter(1, 1);
             
-            // Set up filter controls with proper event handling
-            const minWeightSlider = modal.querySelector('#min-weight-slider');
-            const minConnectionsSlider = modal.querySelector('#min-connections-slider');
-            const weightValue = modal.querySelector('#min-weight-slider').nextElementSibling;
-            const connectionsValue = modal.querySelector('#min-connections-slider').nextElementSibling;
-            
-            if (minWeightSlider) {
-                minWeightSlider.addEventListener('input', function() {
-                    const minWeight = parseInt(this.value);
-                    const minConnections = parseInt(minConnectionsSlider?.value || 1);
-                    if (weightValue) weightValue.textContent = minWeight;
-                    console.log('Weight filter changed to:', minWeight);
-                    filter(minWeight, minConnections);
-                });
-            }
-            
-            if (minConnectionsSlider) {
-                minConnectionsSlider.addEventListener('input', function() {
-                    const minConnections = parseInt(this.value);
-                    const minWeight = parseInt(minWeightSlider?.value || 1);
-                    if (connectionsValue) connectionsValue.textContent = minConnections;
-                    console.log('Connections filter changed to:', minConnections);
-                    filter(minWeight, minConnections);
-                });
-            }
+            // No filter controls for demo version
         }
 
         // Function to show full review in a modal
