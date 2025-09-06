@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PackSense - Co-occurrence Network Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #2d2d2d 50%, #404040 75%, #555555 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 2em;
+            font-weight: 900;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-btn {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            padding: 20px 0;
+            min-height: calc(100vh - 100px);
+        }
+
+        .network-container {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .network-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .network-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .filter-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .filter-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .filter-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            cursor: pointer;
+        }
+
+        .filter-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            cursor: pointer;
+            border: none;
+        }
+
+        .filter-value {
+            color: #00d4ff;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .filter-explanation {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        #network-visualization {
+            width: 100%;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info-instruction {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .network-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .node-details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .node-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .node-connections {
+            margin-bottom: 15px;
+        }
+
+        .connection-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .connection-item:last-child {
+            border-bottom: none;
+        }
+
+        .connection-term {
+            color: #333;
+        }
+
+        .connection-weight {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .reviews-section {
+            margin-top: 15px;
+        }
+
+        .reviews-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .review-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .error {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">PackSense</div>
+                <a href="/demo" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Demo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="network-container">
+                <div class="network-header">
+                    <h2 class="network-title">Interactive Co-occurrence Network</h2>
+                    <button class="reset-btn" onclick="resetView()">Reset View</button>
+                </div>
+
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label class="filter-label">Min Link Weight (1-5):</label>
+                        <input type="range" class="filter-slider" id="minWeight" min="1" max="5" value="1">
+                        <span class="filter-value" id="weightValue">1</span>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Min Connections:</label>
+                        <input type="range" class="filter-slider" id="minConnections" min="1" max="20" value="4">
+                        <span class="filter-value" id="connectionsValue">4</span>
+                    </div>
+                    <div class="filter-explanation">
+                        Simple filtering: Min Link Weight 3 = show links with weight ≥ 3, Min Connections 5 = show nodes with ≥ 5 connections. Lower values show more, higher values show less.
+                    </div>
+                </div>
+
+                <div id="network-visualization">
+                    <div class="loading">Loading co-occurrence network...</div>
+                </div>
+            </div>
+
+            <div class="info-panel" id="info-panel">
+                <h3 class="info-title">Co-occurrence Network</h3>
+                <p class="info-instruction">Click on any node to see related reviews and images</p>
+                
+                <div class="network-info">
+                    <div class="info-item">
+                        <span>Total Nodes:</span>
+                        <span class="info-value" id="node-count">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Total Connections:</span>
+                        <span class="info-value" id="link-count">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span>Packaging Terms:</span>
+                        <span class="info-value" id="term-count">-</span>
+                    </div>
+                </div>
+
+                <div class="node-details" id="node-details">
+                    <div class="node-title" id="node-title">Node Details</div>
+                    <div class="node-connections" id="node-connections"></div>
+                    <div class="reviews-section" id="reviews-section"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let networkData = null;
+        let filteredData = null;
+
+        // Load co-occurrence data
+        async function loadNetworkData() {
+            try {
+                const response = await fetch('/demo_cooccurrence');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                networkData = data;
+                filteredData = data;
+                updateNetworkInfo();
+                createNetworkVisualization();
+                
+            } catch (error) {
+                console.error('Error loading network data:', error);
+                document.getElementById('network-visualization').innerHTML = 
+                    '<div class="error">Error loading network data: ' + error.message + '</div>';
+            }
+        }
+
+        function updateNetworkInfo() {
+            if (networkData) {
+                document.getElementById('node-count').textContent = networkData.total_nodes || 0;
+                document.getElementById('link-count').textContent = networkData.total_connections || 0;
+                document.getElementById('term-count').textContent = networkData.packaging_terms || 0;
+            }
+        }
+
+        function createNetworkVisualization() {
+            const container = document.getElementById('network-visualization');
+            container.innerHTML = '';
+
+            if (!networkData || !networkData.nodes || !networkData.relationships) {
+                container.innerHTML = '<div class="error">No network data available</div>';
+                return;
+            }
+
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+
+            // Create SVG
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            // Create force simulation
+            const simulation = d3.forceSimulation(networkData.nodes)
+                .force('link', d3.forceLink(networkData.relationships).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(networkData.relationships)
+                .enter().append('line')
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6)
+                .attr('stroke-width', d => Math.sqrt(d.weight) * 2);
+
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(networkData.nodes)
+                .enter().append('circle')
+                .attr('r', 8)
+                .attr('fill', '#00d4ff')
+                .attr('stroke', '#ffffff')
+                .attr('stroke-width', 2)
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended))
+                .on('click', function(event, d) {
+                    showNodeDetails(d);
+                });
+
+            // Add labels
+            const label = svg.append('g')
+                .selectAll('text')
+                .data(networkData.nodes)
+                .enter().append('text')
+                .text(d => d.name)
+                .attr('font-size', '12px')
+                .attr('font-family', 'Inter, sans-serif')
+                .attr('fill', '#ffffff')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em');
+
+            // Update positions on tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+        function showNodeDetails(node) {
+            const detailsDiv = document.getElementById('node-details');
+            const titleDiv = document.getElementById('node-title');
+            const connectionsDiv = document.getElementById('node-connections');
+            const reviewsDiv = document.getElementById('reviews-section');
+
+            titleDiv.textContent = node.name;
+            
+            // Find connections for this node
+            const connections = networkData.relationships.filter(r => 
+                r.source === node.id || r.target === node.id
+            );
+
+            connectionsDiv.innerHTML = '<div class="reviews-title">Connections:</div>';
+            connections.forEach(conn => {
+                const otherNode = conn.source === node.id ? conn.target : conn.source;
+                const div = document.createElement('div');
+                div.className = 'connection-item';
+                div.innerHTML = `
+                    <span class="connection-term">${otherNode}</span>
+                    <span class="connection-weight">${conn.weight}</span>
+                `;
+                connectionsDiv.appendChild(div);
+            });
+
+            reviewsDiv.innerHTML = '<div class="reviews-title">Sample Reviews:</div>';
+            reviewsDiv.innerHTML += '<div class="review-item">This is a demo review related to ' + node.name + ' packaging.</div>';
+            reviewsDiv.innerHTML += '<div class="review-item">Another review mentioning ' + node.name + ' in the context of product packaging.</div>';
+
+            detailsDiv.style.display = 'block';
+        }
+
+        function resetView() {
+            if (networkData) {
+                createNetworkVisualization();
+            }
+        }
+
+        // Filter controls
+        document.getElementById('minWeight').addEventListener('input', function() {
+            document.getElementById('weightValue').textContent = this.value;
+            applyFilters();
+        });
+
+        document.getElementById('minConnections').addEventListener('input', function() {
+            document.getElementById('connectionsValue').textContent = this.value;
+            applyFilters();
+        });
+
+        function applyFilters() {
+            const minWeight = parseInt(document.getElementById('minWeight').value);
+            const minConnections = parseInt(document.getElementById('minConnections').value);
+
+            if (!networkData) return;
+
+            // Filter relationships by weight
+            const filteredRelationships = networkData.relationships.filter(r => r.weight >= minWeight);
+            
+            // Get nodes that have enough connections
+            const nodeConnections = {};
+            filteredRelationships.forEach(r => {
+                nodeConnections[r.source] = (nodeConnections[r.source] || 0) + 1;
+                nodeConnections[r.target] = (nodeConnections[r.target] || 0) + 1;
+            });
+
+            const filteredNodes = networkData.nodes.filter(n => 
+                (nodeConnections[n.id] || 0) >= minConnections
+            );
+
+            // Update the visualization with filtered data
+            const filteredData = {
+                ...networkData,
+                nodes: filteredNodes,
+                relationships: filteredRelationships.filter(r => 
+                    filteredNodes.some(n => n.id === r.source) && 
+                    filteredNodes.some(n => n.id === r.target)
+                )
+            };
+
+            networkData = filteredData;
+            updateNetworkInfo();
+            createNetworkVisualization();
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadNetworkData);
+    </script>
+</body>
+</html>

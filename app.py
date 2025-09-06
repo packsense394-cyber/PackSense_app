@@ -116,6 +116,11 @@ def newest_product_folder(prefix="Tide_Ultra_Oxi_Boost", base="static"):
         return None
     return os.path.basename(max(candidates, key=os.path.getmtime))
 
+@app.route('/cooccurrence_demo')
+def cooccurrence_demo():
+    """Demo co-occurrence network page"""
+    return render_template('cooccurrence_demo.html')
+
 @app.route("/demo")
 def demo():
     """Demo mode - shows pre-scraped data with full PackSense dashboard using exact same template as analysis"""
