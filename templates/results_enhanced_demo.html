@@ -2823,7 +2823,7 @@
                 .style('pointer-events', 'none')
                 .text(d => d.name);
             
-            // Create force simulation (better spacing)
+            // Create force simulation (better spacing and centering)
             const simulation = d3.forceSimulation(base.nodes)
                 .force('link', d3.forceLink(base.links)
                     .id(d => d.id)
@@ -2832,8 +2832,8 @@
                 .force('charge', d3.forceManyBody().strength(-800))
                 .force('center', d3.forceCenter(width / 2, height / 2))
                 .force('collision', d3.forceCollide().radius(d => r(d.size || 1) + 25))
-                .force('x', d3.forceX(width / 2).strength(0.05))
-                .force('y', d3.forceY(height / 2).strength(0.05));
+                .force('x', d3.forceX(width / 2).strength(0.2))
+                .force('y', d3.forceY(height / 2).strength(0.2));
             
             // Update positions on tick
             simulation.on('tick', () => {
@@ -3449,6 +3449,15 @@
             window.currentLink = link;
             window.currentLabel = label;
             window.currentSimulation = simulation;
+            
+            // Add reset view functionality
+            const resetBtn = modal.querySelector('#reset-view-btn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    // Restart simulation to re-center
+                    simulation.alpha(0.3).restart();
+                });
+            }
             
             // Show the full graph initially (no filtering)
             console.log('Showing full graph initially...');
