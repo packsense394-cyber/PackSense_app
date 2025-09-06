@@ -255,12 +255,45 @@ def demo():
             'packaging_consistency': 6.8
         }
         
-        # Generate sample data for other components
+        # Generate realistic co-occurrence data (match localhost exactly)
         cooccurrence_data = {
-            'bottle': ['cap', 'seal'],
-            'box': ['tape', 'package'],
-            'container': ['seal', 'lid'],
-            'package': ['box', 'tape']
+            'bottle': {'cap': 8, 'seal': 12, 'leak': 15, 'crack': 6, 'plastic': 10, 'design': 5, 'lid': 7, 'spill': 9, 'broken': 4, 'damage': 3},
+            'box': {'tape': 14, 'package': 18, 'damaged': 11, 'cracked': 7, 'secure': 6, 'sealed': 8, 'design': 9, 'small': 5, 'large': 4, 'mess': 6},
+            'container': {'seal': 16, 'lid': 13, 'leak': 12, 'leaking': 8, 'plastic': 11, 'cracked': 5, 'damage': 4, 'secure': 7, 'sealed': 9, 'design': 6},
+            'package': {'box': 20, 'tape': 15, 'damaged': 9, 'secure': 8, 'sealed': 10, 'design': 7, 'small': 6, 'large': 5, 'mess': 4, 'clean': 3},
+            'packaging': {'design': 12, 'damaged': 8, 'secure': 9, 'sealed': 7, 'mess': 5, 'clean': 4, 'small': 3, 'large': 2, 'tape': 6, 'box': 5},
+            'tape': {'box': 16, 'package': 14, 'sealed': 11, 'secure': 8, 'damaged': 6, 'mess': 4, 'design': 5, 'small': 3, 'large': 2, 'clean': 2},
+            'seal': {'bottle': 12, 'container': 16, 'leak': 10, 'leaking': 7, 'secure': 9, 'sealed': 8, 'plastic': 6, 'cracked': 4, 'damage': 3, 'design': 5},
+            'lid': {'bottle': 7, 'container': 13, 'cap': 9, 'leak': 8, 'crack': 5, 'plastic': 7, 'design': 4, 'broken': 3, 'damage': 2, 'spill': 4},
+            'leak': {'bottle': 15, 'container': 12, 'seal': 10, 'leaking': 6, 'spill': 8, 'cracked': 5, 'damage': 4, 'plastic': 6, 'broken': 3, 'mess': 2},
+            'spill': {'bottle': 9, 'leak': 8, 'leaking': 5, 'mess': 6, 'damage': 3, 'cracked': 2, 'broken': 2, 'plastic': 4, 'container': 3, 'design': 1},
+            'crack': {'bottle': 6, 'container': 5, 'cracked': 4, 'damage': 3, 'broken': 2, 'plastic': 3, 'leak': 2, 'spill': 1, 'design': 1, 'mess': 1},
+            'broke': {'broken': 8, 'damage': 6, 'cracked': 4, 'plastic': 5, 'bottle': 3, 'container': 2, 'leak': 2, 'spill': 1, 'mess': 2, 'design': 1},
+            'mess': {'spill': 6, 'leak': 2, 'damage': 2, 'broken': 2, 'cracked': 1, 'plastic': 2, 'bottle': 1, 'container': 1, 'design': 1, 'clean': 3},
+            'cap': {'bottle': 8, 'lid': 9, 'plastic': 6, 'design': 4, 'leak': 3, 'crack': 2, 'broken': 2, 'damage': 1, 'spill': 1, 'secure': 2},
+            'plastic': {'bottle': 10, 'container': 11, 'cap': 6, 'lid': 7, 'design': 5, 'leak': 6, 'crack': 3, 'broken': 3, 'damage': 2, 'spill': 4},
+            'design': {'bottle': 5, 'box': 9, 'container': 6, 'package': 7, 'packaging': 12, 'tape': 5, 'seal': 5, 'lid': 4, 'plastic': 5, 'cap': 4},
+            'damaged': {'box': 11, 'package': 9, 'packaging': 8, 'tape': 6, 'cracked': 7, 'broken': 5, 'damage': 4, 'leak': 3, 'spill': 2, 'mess': 2},
+            'secure': {'box': 6, 'package': 8, 'packaging': 9, 'tape': 8, 'seal': 9, 'sealed': 7, 'design': 3, 'cap': 2, 'container': 2, 'bottle': 1},
+            'sealed': {'box': 8, 'package': 10, 'packaging': 7, 'tape': 11, 'seal': 8, 'secure': 7, 'design': 4, 'container': 3, 'bottle': 2, 'plastic': 2},
+            'small': {'box': 5, 'package': 6, 'packaging': 3, 'tape': 3, 'design': 2, 'bottle': 1, 'container': 1, 'cap': 1, 'lid': 1, 'plastic': 1},
+            'large': {'box': 4, 'package': 5, 'packaging': 2, 'tape': 2, 'design': 1, 'bottle': 1, 'container': 1, 'cap': 1, 'lid': 1, 'plastic': 1},
+            'clean': {'mess': 3, 'package': 3, 'packaging': 4, 'design': 2, 'tape': 2, 'box': 1, 'bottle': 1, 'container': 1, 'cap': 1, 'lid': 1},
+            'tin': {'can': 8, 'container': 6, 'design': 3, 'plastic': 2, 'bottle': 1, 'box': 1, 'package': 1, 'cap': 1, 'lid': 1, 'seal': 1},
+            'bag': {'pouch': 12, 'package': 8, 'design': 4, 'plastic': 3, 'tape': 2, 'box': 2, 'container': 1, 'bottle': 1, 'cap': 1, 'lid': 1},
+            'pouch': {'bag': 12, 'package': 6, 'design': 3, 'plastic': 2, 'tape': 1, 'box': 1, 'container': 1, 'bottle': 1, 'cap': 1, 'lid': 1},
+            'top': {'cover': 9, 'lid': 6, 'cap': 5, 'design': 3, 'bottle': 2, 'container': 2, 'box': 1, 'package': 1, 'plastic': 1, 'seal': 1},
+            'cover': {'top': 9, 'lid': 7, 'cap': 6, 'design': 4, 'bottle': 2, 'container': 2, 'box': 1, 'package': 1, 'plastic': 1, 'seal': 1},
+            'can': {'tin': 8, 'container': 5, 'design': 2, 'plastic': 2, 'bottle': 1, 'box': 1, 'package': 1, 'cap': 1, 'lid': 1, 'seal': 1},
+            'leaking': {'leak': 6, 'container': 4, 'seal': 7, 'spill': 5, 'damage': 2, 'cracked': 2, 'broken': 1, 'plastic': 2, 'bottle': 1, 'mess': 1},
+            'cracked': {'crack': 4, 'damaged': 7, 'broken': 5, 'leak': 5, 'spill': 2, 'damage': 3, 'plastic': 2, 'bottle': 1, 'container': 1, 'mess': 1},
+            'damage': {'damaged': 4, 'cracked': 3, 'broken': 3, 'leak': 4, 'spill': 3, 'crack': 3, 'bottle': 1, 'container': 1, 'plastic': 2, 'mess': 2},
+            'broken': {'broke': 8, 'damaged': 5, 'cracked': 5, 'damage': 3, 'leak': 3, 'spill': 2, 'crack': 2, 'plastic': 3, 'bottle': 1, 'container': 1},
+            'spilled': {'spill': 4, 'leak': 3, 'leaking': 2, 'mess': 3, 'damage': 2, 'broken': 1, 'cracked': 1, 'plastic': 1, 'bottle': 1, 'container': 1},
+            'clean': {'mess': 3, 'package': 3, 'packaging': 4, 'design': 2, 'tape': 2, 'box': 1, 'bottle': 1, 'container': 1, 'cap': 1, 'lid': 1},
+            'protective': {'packaging': 6, 'design': 4, 'secure': 3, 'sealed': 2, 'box': 2, 'package': 2, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1},
+            'loose': {'packaging': 4, 'design': 2, 'secure': 2, 'sealed': 1, 'box': 1, 'package': 1, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1},
+            'padding': {'packaging': 3, 'design': 2, 'secure': 1, 'sealed': 1, 'box': 1, 'package': 1, 'tape': 1, 'bottle': 1, 'container': 1, 'plastic': 1}
         }
         
         keyword_image_map = {
