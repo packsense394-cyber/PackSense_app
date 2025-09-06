@@ -380,9 +380,11 @@ def demo():
             'links': links
         }
         
-        # Debug: Print node count
+        # Debug: Print node count and all terms
         print(f"Generated {len(nodes)} nodes and {len(links)} links for co-occurrence network")
-        print(f"Sample nodes: {[n['name'] for n in nodes[:10]]}")
+        print(f"All node names: {[n['name'] for n in nodes]}")
+        print(f"Co-occurrence data keys: {list(cooccurrence_data.keys())}")
+        print(f"All unique terms from co-occurrence data: {len(all_terms)}")
         
         # Render using the demo template that has the correct layout
         return render_template(

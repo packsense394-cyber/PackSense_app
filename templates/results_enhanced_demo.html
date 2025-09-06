@@ -2903,14 +2903,18 @@
             // Initial filter with proper values
             filter(1, 1);
             
-            // Set up filter controls
+            // Set up filter controls with proper event handling
             const minWeightSlider = modal.querySelector('#min-weight-slider');
             const minConnectionsSlider = modal.querySelector('#min-connections-slider');
+            const weightValue = modal.querySelector('#min-weight-slider').nextElementSibling;
+            const connectionsValue = modal.querySelector('#min-connections-slider').nextElementSibling;
             
             if (minWeightSlider) {
                 minWeightSlider.addEventListener('input', function() {
                     const minWeight = parseInt(this.value);
                     const minConnections = parseInt(minConnectionsSlider?.value || 1);
+                    if (weightValue) weightValue.textContent = minWeight;
+                    console.log('Weight filter changed to:', minWeight);
                     filter(minWeight, minConnections);
                 });
             }
@@ -2919,6 +2923,8 @@
                 minConnectionsSlider.addEventListener('input', function() {
                     const minConnections = parseInt(this.value);
                     const minWeight = parseInt(minWeightSlider?.value || 1);
+                    if (connectionsValue) connectionsValue.textContent = minConnections;
+                    console.log('Connections filter changed to:', minConnections);
                     filter(minWeight, minConnections);
                 });
             }
