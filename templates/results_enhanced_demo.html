@@ -2785,11 +2785,13 @@
                 // For now, just show all nodes and links
                 if (window.updateGraphVisibility) {
                     window.updateGraphVisibility(baseGraph.nodes, baseGraph.links);
+                } else {
+                    console.error('updateGraphVisibility function not available');
                 }
             }
             
-            // Initial filter with proper values
-            filter(1, 1);
+            // Don't call filter initially - let the D3 initialization handle it
+            // filter(1, 1);
             
             // No filter controls for demo version
         }
@@ -3298,6 +3300,12 @@
             window.d3Elements = { node, link, label, simulation };
             console.log('D3 elements stored globally:', Object.keys(window.d3Elements));
             
+            // Also store them as individual global variables for easier access
+            window.currentNode = node;
+            window.currentLink = link;
+            window.currentLabel = label;
+            window.currentSimulation = simulation;
+            
             // Show the full graph initially (no filtering)
             console.log('Showing full graph initially...');
             if (window.updateGraphVisibility) {
@@ -3306,7 +3314,17 @@
             
             // Add filter update function
             window.updateGraphVisibility = function(visibleNodes, visibleLinks) {
-                console.log('Updating graph visibility:', { visibleNodes: visibleNodes.length, visibleLinks: visibleLinks.length });
+                console.log('Updating graph visibility:', { visibleNodes: visibleNodes ? visibleNodes.length : 'null', visibleLinks: visibleLinks ? visibleLinks.length : 'null' });
+                
+                // Get the current D3 elements
+                const node = window.currentNode;
+                const link = window.currentLink;
+                const label = window.currentLabel;
+                
+                if (!node || !link || !label) {
+                    console.error('D3 elements not available:', { node: !!node, link: !!link, label: !!label });
+                    return;
+                }
                 
                 // Special case: if both parameters are null, show everything (reset state)
                 if (visibleNodes === null && visibleLinks === null) {
