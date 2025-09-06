@@ -1227,6 +1227,7 @@
             <script>
                 window.packagingFreq = {{ packaging_freq | default({}) | tojson }};
                 window.packagingTerms = {{ packaging_terms | default([]) | tojson }};
+                window.keywordFrequencies = {{ keyword_frequencies | default({}) | tojson }};
             </script>
 
             <!-- Reviews Section -->
