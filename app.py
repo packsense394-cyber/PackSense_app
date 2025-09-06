@@ -227,10 +227,10 @@ def demo():
         packaging_keywords_flat = [str(term) for term in packaging_terms if term]
         packaging_dropdown_data_flat = [{'value': str(term), 'label': str(term)} for term in packaging_terms if term]
         
-        # Generate image URLs
-        product_image_url = url_for('static', filename=f'{demo_folder}/product.jpg')
-        defect_image_url = url_for('static', filename=f'{demo_folder}/defects_overlay.png')
-        base_image_url = url_for('static', filename=f'{demo_folder}/')
+        # Generate image URLs (use direct paths instead of url_for to avoid context issues)
+        product_image_url = f'/static/{demo_folder}/product.jpg'
+        defect_image_url = f'/static/{demo_folder}/defects_overlay.png'
+        base_image_url = f'/static/{demo_folder}/'
         
         # Generate review filters (matching template expectations)
         review_filters = {
@@ -322,7 +322,7 @@ def demo():
             image_files = [f for f in os.listdir(review_images_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.gif'))]
         
         # Generate packaging library URL
-        packaging_library_url = url_for('static', filename='packaging_library.xlsx')
+        packaging_library_url = '/static/packaging_library.xlsx'
         
         # Generate product description URL
         product_description_url = '/demo-product'
@@ -342,7 +342,7 @@ def demo():
         defect_coords_map = {}
         
         # Generate Excel file URL
-        excel_url = url_for('static', filename=f'{demo_folder}/analysis_results.xlsx')
+        excel_url = f'/static/{demo_folder}/analysis_results.xlsx'
         
         # Render using the demo template that has the correct layout
         return render_template(
