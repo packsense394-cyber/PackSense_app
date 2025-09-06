@@ -387,6 +387,8 @@ def demo():
             <h1>🎯 PackSense Demo Mode</h1>
             <p>Demo mode is working! This shows that PackSense is successfully deployed.</p>
             <p>Error details: {str(e)}</p>
+            <p>Full traceback:</p>
+            <pre>{traceback.format_exc()}</pre>
             <a href="/" style="color: #fff; text-decoration: underline;">← Back to Home</a>
         </body>
         </html>
