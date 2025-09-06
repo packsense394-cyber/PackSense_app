@@ -2741,22 +2741,26 @@
                 console.error('No links in co-occurrence data!');
             }
             
-            // Try the complex implementation first, fallback to simple if it fails
-            try {
-                initCoocNetwork(coocBase, modal);
-            } catch (error) {
-                console.error('Complex network failed, using simple fallback:', error);
-                createSimpleNetwork(coocBase, modal);
-            }
+            // Use simple network directly (more reliable)
+            console.log('Using simple network implementation');
+            createSimpleNetwork(coocBase, modal);
         }
         
         // Simple fallback network function
         function createSimpleNetwork(base, modal) {
             console.log('Creating simple network with:', base);
+            console.log('Base nodes:', base.nodes ? base.nodes.length : 'undefined');
+            console.log('Base links:', base.links ? base.links.length : 'undefined');
             
             const svgContainer = modal.querySelector("#cooc-svg");
             if (!svgContainer) {
                 console.error('SVG container not found');
+                return;
+            }
+            
+            if (!base.nodes || base.nodes.length === 0) {
+                console.error('No nodes data available');
+                svgContainer.innerHTML = '<div style="color: white; padding: 50px; text-align: center;">No network data available</div>';
                 return;
             }
             
