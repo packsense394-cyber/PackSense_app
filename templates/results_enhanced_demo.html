@@ -1569,15 +1569,21 @@
         
         // Word Cloud Generation - Futuristic Design with Dynamic Sizing
         function generateWordCloud() {
+            console.log('generateWordCloud called');
             const wordCloudContainer = document.getElementById('word-cloud');
             const tooltip = document.getElementById('word-tooltip');
             
-            if (!wordCloudContainer) return;
+            if (!wordCloudContainer) {
+                console.error('Word cloud container not found');
+                return;
+            }
             
             // Get keyword frequency data from the backend
-            const keywordData = JSON.parse('{{ keyword_frequencies|tojson|safe }}');
+            const keywordData = window.keywordFrequencies || {};
+            console.log('Keyword data:', keywordData);
             
             if (!keywordData || Object.keys(keywordData).length === 0) {
+                console.log('No keyword data available, using fallback');
                 wordCloudContainer.innerHTML = '<p style="color: white; margin-top: 50px; font-family: \'Rajdhani\', sans-serif;">No keyword data available</p>';
                 return;
             }
@@ -2310,9 +2316,10 @@
             // Get co-occurrence data
             let cooccurrenceData = {};
             try {
-                console.log('Raw co-occurrence data:', '{{ cooccurrence_data|tojson|safe }}');
-                const parsedData = JSON.parse('{{ cooccurrence_data|tojson|safe }}');
-                console.log('Parsed co-occurrence data:', parsedData);
+                const rawData = '{{ cooccurrence_data|tojson|safe }}';
+                console.log('Raw co-occurrence data length:', rawData.length);
+                const parsedData = JSON.parse(rawData);
+                console.log('Parsed co-occurrence data keys:', Object.keys(parsedData).length);
                 
                 if (parsedData && Object.keys(parsedData).length > 0) {
                     cooccurrenceData = parsedData;
