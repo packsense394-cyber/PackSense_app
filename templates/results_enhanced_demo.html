@@ -2707,6 +2707,7 @@
             
             modalContent.appendChild(closeBtn);
             modalContent.appendChild(titleContainer);
+            modalContent.appendChild(filterContainer);
             modalContent.appendChild(networkContainer);
             modal.appendChild(modalContent);
             document.body.appendChild(modal);
@@ -2772,10 +2773,10 @@
                 }
             };
 
-            // Scale for node sizes (smaller range for better spacing)
+            // Scale for node sizes (matching localhost)
             const r = d3.scaleSqrt()
                 .domain(d3.extent(baseGraph.nodes, d => +d.size || 1))
-                .range([6, 20]);
+                .range([10, 30]);
 
             let simulation = null;
 
