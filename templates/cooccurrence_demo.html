@@ -375,9 +375,18 @@
 
         // Load co-occurrence data
         async function loadNetworkData() {
+            console.log('Loading network data...');
             try {
+                console.log('Fetching from /demo_cooccurrence...');
                 const response = await fetch('/demo_cooccurrence');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Data received:', data);
                 
                 if (data.error) {
                     throw new Error(data.error);
@@ -396,10 +405,19 @@
         }
 
         function updateNetworkInfo() {
+            console.log('Updating network info...');
             if (networkData) {
+                console.log('Network data available:', networkData);
                 document.getElementById('node-count').textContent = networkData.total_nodes || 0;
                 document.getElementById('link-count').textContent = networkData.total_connections || 0;
                 document.getElementById('term-count').textContent = networkData.packaging_terms || 0;
+                console.log('Network info updated:', {
+                    nodes: networkData.total_nodes,
+                    connections: networkData.total_connections,
+                    terms: networkData.packaging_terms
+                });
+            } else {
+                console.log('No network data available');
             }
         }
 
